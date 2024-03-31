@@ -1,5 +1,11 @@
 package main
 
+import (
+	"toucham/gotitan/server"
+)
+
 func main() {
-	println("Hello World")
+	PORT := "8080"
+	app := server.Init(PORT)
+	app.Start()
 }
