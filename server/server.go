@@ -7,10 +7,11 @@ import (
 )
 
 type HttpServer struct {
-	ln    net.Listener // socket listener
-	port  string
-	reqMw []ReqMiddleware
-	resMw []ResMiddleware
+	ln     net.Listener // socket listener
+	port   string
+	reqMw  []ReqMiddleware
+	resMw  []ResMiddleware
+	routes map[string]HttpAction
 }
 
 func Init(port string) *HttpServer {
@@ -25,6 +26,7 @@ func Init(port string) *HttpServer {
 		port,
 		make([]ReqMiddleware, 2), // expect at least 2
 		make([]ResMiddleware, 1),
+		make(map[string]HttpAction),
 	}
 	return &s
 }
