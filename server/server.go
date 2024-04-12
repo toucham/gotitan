@@ -11,7 +11,7 @@ type HttpServer struct {
 	port   string
 	reqMw  []ReqMiddleware
 	resMw  []ResMiddleware
-	routes map[string]HttpAction
+	routes []map[string]HttpAction
 }
 
 func Init(port string) *HttpServer {
@@ -21,12 +21,19 @@ func Init(port string) *HttpServer {
 		panic(err)
 	}
 
+	// HashMap for each method ordered as [get, post, put, delete]
+	routes := make([]map[string]HttpAction, 4)
+	for i := 0; i < 4; i++ {
+		routes[i] = make(map[string]HttpAction)
+	}
+
+	routes[0] = make(map[string]HttpAction)
 	s := HttpServer{
 		ln,
 		port,
 		make([]ReqMiddleware, 2), // expect at least 2
 		make([]ResMiddleware, 1),
-		make(map[string]HttpAction),
+		routes,
 	}
 	return &s
 }
@@ -56,8 +63,8 @@ func handleConn(c net.Conn) {
 		return
 	}
 
-	// get HttpRequest
-	req, err := extractReq(netData)
+	// parse http message to create HttpRequest
+	req, err := ExtractRequest(netData)
 	if err != nil {
 		panic("oh no") // TODO: replace panic to logging
 	}
@@ -66,21 +73,13 @@ func handleConn(c net.Conn) {
 	processMiddlware(req)
 
 	// routing
-}
-
-// parse raw data to instantiate HttpRequest according to HTTP/1.1
-func extractReq(msg string) (*HttpRequest, error) {
-	req := HttpRequest{}
-
-	// 1) get request line
-
-	// 2) get fields (headers)
-
-	// 3) get body
-
-	return &req, nil
+	reqToRoute(req)
 }
 
 func processMiddlware(req *HttpRequest) {
+
+}
+
+func reqToRoute(req *HttpRequest) {
 
 }
