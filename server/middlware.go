@@ -1,10 +1,12 @@
 package server
 
+import "github.com/toucham/gotitan/server/msg"
+
 type MiddlwareOptions struct {
 }
 
-type ReqMiddleware func(req *HttpRequest)
-type ResMiddleware func(req *HttpRequest)
+type ReqMiddleware func(req *msg.HttpRequest)
+type ResMiddleware func(req *msg.HttpRequest)
 
 // Add middlware for processing requests
 func (s *HttpServer) AddReqMiddlware(m ReqMiddleware, opt MiddlwareOptions) {

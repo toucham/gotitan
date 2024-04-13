@@ -1,7 +1,9 @@
 package server
 
-type HttpAction func(req *HttpRequest) *HttpResponse
+import "github.com/toucham/gotitan/server/msg"
 
-func (s *HttpServer) AddRoute(method HttpMethod, route string, action HttpAction) {
+type HttpAction func(req *msg.HttpRequest) *msg.HttpResponse
+
+func (s *HttpServer) AddRoute(method msg.HttpMethod, route string, action HttpAction) {
 
 }

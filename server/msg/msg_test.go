@@ -1,4 +1,4 @@
-package server
+package msg
 
 import (
 	"testing"
@@ -45,7 +45,7 @@ func TestExtractRequest(t *testing.T) {
 		},
 	}
 	for _, mr := range mockRequests {
-		req, err := ExtractRequest(mr.mock)
+		req, err := NewRequest(mr.mock)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -1,10 +1,11 @@
-package server
+package msg
 
 import (
 	"errors"
 	"strings"
 
 	"github.com/toucham/gotitan/logger"
+	"github.com/toucham/gotitan/server/url"
 )
 
 type HttpMethod string
@@ -20,7 +21,7 @@ type HttpMessage struct {
 	Headers map[string]string
 	method  HttpMethod
 	body    string
-	uri     string
+	url     *url.Url
 	version string
 }
 
@@ -36,7 +37,7 @@ func (r *HttpMessage) GetMethod() HttpMethod {
 
 // getter method for uri in HttpRequest
 func (r *HttpMessage) GetUri() string {
-	return r.uri
+	return r.url.String()
 }
 
 type HttpResponse struct {
@@ -48,7 +49,7 @@ type HttpRequest struct {
 }
 
 // parse raw data to instantiate HttpRequest according to HTTP/1.1
-func ExtractRequest(msg string) (*HttpRequest, error) {
+func NewRequest(msg string) (*HttpRequest, error) {
 	req := new(HttpRequest)
 	req.Headers = make(map[string]string)
 
@@ -62,7 +63,7 @@ func ExtractRequest(msg string) (*HttpRequest, error) {
 		return nil, errors.New("incorrect string to parse in request-line")
 	}
 	req.method = HttpMethod(strings.ToLower(requestLine[0]))
-	req.uri = requestLine[1]
+	// req.url = requestLine[1]
 	req.version = requestLine[2]
 	if req.version != "HTTP/1.1" {
 		logger.Fatal("HTTP request is of version %s", req.version)

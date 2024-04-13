@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/toucham/gotitan/logger"
+	"github.com/toucham/gotitan/server/msg"
 )
 
 type HttpServer struct {
@@ -26,7 +27,7 @@ func Init(host string, port string) *HttpServer {
 
 	logger.Info("Listening on address: %s", addr)
 
-	// HashMap for each method ordered as [get, post, put, delete]
+	// An array of map for each method ordered as [get, post, put, delete]
 	routes := make([]map[string]HttpAction, 4)
 	for i := 0; i < 4; i++ {
 		routes[i] = make(map[string]HttpAction)
@@ -36,7 +37,7 @@ func Init(host string, port string) *HttpServer {
 	s := HttpServer{
 		ln,
 		port,
-		make([]ReqMiddleware, 2), // expect at least 2
+		make([]ReqMiddleware, 0),
 		routes,
 		logger,
 	}
@@ -69,22 +70,18 @@ func handleConn(c net.Conn) {
 	}
 
 	// parse http message to create HttpRequest
-	req, err := ExtractRequest(netData)
+	req, err := msg.NewRequest(netData)
 	if err != nil {
 		panic("oh no") // TODO: replace panic to logging
 	}
 
 	// process middlware
-	processMiddlware(req)
+	processMiddleware(req)
 
 	// routing
-	reqToRoute(req)
+	// reqToRoute(req)
 }
 
-func processMiddlware(req *HttpRequest) {
-
-}
-
-func reqToRoute(req *HttpRequest) {
+func processMiddleware(req *msg.HttpRequest) {
 
 }
