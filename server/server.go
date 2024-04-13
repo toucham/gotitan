@@ -4,22 +4,27 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+
+	"github.com/toucham/gotitan/logger"
 )
 
 type HttpServer struct {
 	ln     net.Listener // socket listener
 	port   string
 	reqMw  []ReqMiddleware
-	resMw  []ResMiddleware
 	routes []map[string]HttpAction
+	logger *logger.Logger
 }
 
-func Init(port string) *HttpServer {
-	ln, err := net.Listen("tcp", ":"+port)
-
+func Init(host string, port string) *HttpServer {
+	logger := logger.New()
+	addr := fmt.Sprintf("%s:%s", host, port)
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		panic(err)
 	}
+
+	logger.Info("Listening on address: %s", addr)
 
 	// HashMap for each method ordered as [get, post, put, delete]
 	routes := make([]map[string]HttpAction, 4)
@@ -32,8 +37,8 @@ func Init(port string) *HttpServer {
 		ln,
 		port,
 		make([]ReqMiddleware, 2), // expect at least 2
-		make([]ResMiddleware, 1),
 		routes,
+		logger,
 	}
 	return &s
 }

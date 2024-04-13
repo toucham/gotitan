@@ -1,7 +1,6 @@
 package server
 
 import (
-	"server"
 	"testing"
 )
 
@@ -10,7 +9,7 @@ type MockRequests struct {
 	uri        string
 	headersLen int
 	body       string
-	method     server.HttpMethod
+	method     HttpMethod
 }
 
 const MOCK_GET_REQUEST = `GET /index.html HTTP/1.1
@@ -35,18 +34,18 @@ func TestExtractRequest(t *testing.T) {
 			uri:        "/index.html",
 			headersLen: 5,
 			body:       "",
-			method:     server.HTTP_GET,
+			method:     HTTP_GET,
 		},
 		{
 			mock:       MOCK_POST_REQUEST,
 			uri:        "/help.txt",
 			headersLen: 3,
 			body:       "Please visit www.example.re for the latest updates!\nAnother cool body. Hopefully this works",
-			method:     server.HTTP_POST,
+			method:     HTTP_POST,
 		},
 	}
 	for _, mr := range mockRequests {
-		req, err := server.ExtractRequest(mr.mock)
+		req, err := ExtractRequest(mr.mock)
 		if err != nil {
 			t.Fatal(err)
 		}

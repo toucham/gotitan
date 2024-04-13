@@ -12,6 +12,6 @@ func (s *HttpServer) AddReqMiddlware(m ReqMiddleware, opt MiddlwareOptions) {
 }
 
 // Add middlware for processing response
-func (s *HttpServer) AddResMiddlware(m ResMiddleware, opt MiddlwareOptions) {
-	s.resMw = append(s.resMw, m)
-}
+// func (s *HttpServer) AddResMiddlware(m ResMiddleware, opt MiddlwareOptions) {
+// 	s.resMw = append(s.resMw, m)
+// }
