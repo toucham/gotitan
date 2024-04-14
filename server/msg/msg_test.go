@@ -27,7 +27,7 @@ Content-Length: 51
 Please visit www.example.re for the latest updates!
 Another cool body. Hopefully this works`
 
-func TestExtractRequest(t *testing.T) {
+func TestHttpRequest_NewRequest(t *testing.T) {
 	mockRequests := []MockRequests{
 		{
 			mock:       MOCK_GET_REQUEST,

@@ -40,8 +40,9 @@ func (r *HttpMessage) GetUri() string {
 	return r.url.String()
 }
 
-type HttpResponse struct {
-	HttpMessage
+// getter method for path in HttpRequest
+func (r *HttpMessage) GetPath() string {
+	return r.url.String() // TODO: change to get path
 }
 
 type HttpRequest struct {
@@ -94,4 +95,18 @@ func NewRequest(msg string) (*HttpRequest, error) {
 	}
 
 	return req, nil
+}
+
+// Http response structure
+type HttpResponse struct {
+	HttpMessage
+	Status int16
+}
+
+func (r *HttpResponse) SetStatus(status int16) *HttpResponse {
+	return r
+}
+
+func (r *HttpResponse) String() (string, error) {
+	return "HTTP OK", nil
 }
