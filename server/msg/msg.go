@@ -64,7 +64,7 @@ func NewRequest(msg string) (*HttpRequest, error) {
 		return nil, errors.New("incorrect string to parse in request-line")
 	}
 	req.method = HttpMethod(strings.ToLower(requestLine[0]))
-	// req.url = requestLine[1]
+	req.url = url.NewFromReqLine(requestLine[1])
 	req.version = requestLine[2]
 	if req.version != "HTTP/1.1" {
 		logger.Fatal("HTTP request is of version %s", req.version)
@@ -75,7 +75,7 @@ func NewRequest(msg string) (*HttpRequest, error) {
 	bodyIndex := len(lines) + 1
 	for i, field := range lines[1:] {
 		if field == "" {
-			logger.Info("empty field")
+			logger.Debug("empty field")
 			bodyIndex = i + 1
 			break
 		}
@@ -89,7 +89,7 @@ func NewRequest(msg string) (*HttpRequest, error) {
 
 	// 3) get body
 	if bodyIndex > len(lines) {
-		logger.Info("No body")
+		logger.Debug("No body")
 	} else {
 		req.body = strings.Join(lines[bodyIndex+1:], "\n")
 	}

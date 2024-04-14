@@ -47,7 +47,7 @@ func TestHttpRequest_NewRequest(t *testing.T) {
 	for _, mr := range mockRequests {
 		req, err := NewRequest(mr.mock)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 
 		checkMethod := req.GetMethod() == mr.method
