@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"log"
 	"os"
 )
@@ -13,13 +14,13 @@ type Logger struct {
 	fatal *log.Logger // level 3
 }
 
-func New() *Logger {
+func New(origin string) *Logger {
 	l := Logger{
 		level: 0,
-		debug: log.New(os.Stdout, "DEBUG: ", log.Ltime),
-		info:  log.New(os.Stdout, "INFO: ", log.Ltime),
-		warn:  log.New(os.Stdout, "WARN: ", log.Ltime),
-		fatal: log.New(os.Stdout, "FATAL: ", log.Ltime),
+		debug: log.New(os.Stdout, fmt.Sprintf("DEBUG [%s]: ", origin), log.Ltime),
+		info:  log.New(os.Stdout, fmt.Sprintf("INFO [%s]: ", origin), log.Ltime),
+		warn:  log.New(os.Stdout, fmt.Sprintf("WARN [%s]: ", origin), log.Ltime),
+		fatal: log.New(os.Stdout, fmt.Sprintf("FATAL [%s]: ", origin), log.Ltime),
 	}
 	return &l
 }

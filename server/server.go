@@ -20,7 +20,7 @@ type HttpServer struct {
 }
 
 func Init(host string, port string) *HttpServer {
-	logger := logger.New()
+	logger := logger.New("Server")
 	addr := fmt.Sprintf("%s:%s", host, port)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -58,25 +58,24 @@ func (s *HttpServer) Start() {
 		}
 
 		// concurrently handle connections
-		go s.handleConn(c)
+		go s.handleConn(c) // connection is on another fd (accepting conn opens a new fd)
 	}
 
 }
 
 func (s *HttpServer) handleConn(c net.Conn) {
-	defer c.Close()
-	// wraps the tcp connection with reader and read app message
-	message, err := bufio.NewReader(c).ReadString(('\n'))
+	// TODO: how to manage connection?
+	defer c.Close()                                       // defer to close TCP connection
+	message, err := bufio.NewReader(c).ReadString(('\n')) // wraps the tcp conn with reader and read msg
 	if err != io.EOF && err != nil {
 		s.logger.Warn(err.Error())
 		return
 	}
 
-	fmt.Printf("New message: %s", message)
-	// parse app-layer message to create HttpRequest
-	req, err := msg.NewRequest(message)
+	req, err := msg.NewRequest(message) // instantiate [HttpRequest] from msg
 	if err != nil {
-		panic("oh no") // TODO: replace panic to logging
+		s.logger.Warn("Unable to instantiate [HttpRequest]: %s", err.Error())
+		return
 	}
 
 	// process middlware
@@ -85,21 +84,19 @@ func (s *HttpServer) handleConn(c net.Conn) {
 	// routing
 	res := s.To(req)
 
-	// convert to string to send to socket
-	resString, err := res.String()
+	resString, err := res.String() // convert to string to send to socket
 	if err != nil {
 		s.logger.Warn(err.Error())
 		return
 	}
 
-	// create buffered writer
-	writer := bufio.NewWriter(c)
+	writer := bufio.NewWriter(c)                            // create buffered writer from net.Conn
 	if _, err = writer.WriteString(resString); err != nil { // write the [HttpResponse] to buffer
 		s.logger.Warn(err.Error())
 		return
 	} else {
+		s.logger.Debug("Respond to client")
 		writer.Flush() // respond to client (write to socket)
-		s.logger.Debug("Responded to client")
 	}
 }
 

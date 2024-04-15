@@ -15,3 +15,9 @@ These are the features that webserver will offer:
 ## Architecture
 
 This is the high-level architecture of the web server:
+
+## Learn
+
+### IO in Golang
+
+`io.Writer` and `io.Reader` are interfaces that is wrapped around a file descriptor for writing/reading bytes. The `net.Conn` implements both interfaces, allowing to read/write from/to the socket file descriptor.
