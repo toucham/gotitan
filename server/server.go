@@ -18,7 +18,7 @@ type HttpServer struct {
 	ln            net.Listener // socket listener
 	port          string
 	reqMw         []ReqMiddleware
-	logger        *logger.Logger
+	logger        logger.Logger
 }
 
 func Init(host string, port string) *HttpServer {

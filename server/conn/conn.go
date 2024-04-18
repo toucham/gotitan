@@ -16,12 +16,12 @@ type HttpConn struct {
 	conn    net.Conn                  // TCP connection
 	timeout int32                     // connection timeout in ms
 	channel chan *router.RouterResult // queue response to return in correct order
-	route   *router.Router
-	logger  *logger.Logger
+	route   router.Route
+	logger  logger.Logger
 }
 
 // create connection manager
-func HandleConn(conn net.Conn, r *router.Router, timeout int32) *HttpConn {
+func HandleConn(conn net.Conn, r router.Route, timeout int32) *HttpConn {
 	queue := make(chan *router.RouterResult, CHANNEL_BUFFER) // set buffer size to not block read
 	logger := logger.New("HttpConn")
 	return &HttpConn{conn, timeout, queue, r, logger}
@@ -31,18 +31,21 @@ func HandleConn(conn net.Conn, r *router.Router, timeout int32) *HttpConn {
 func (c *HttpConn) Read() {
 	scanner := bufio.NewScanner(c.conn)
 	scanner.Split(bufio.ScanLines)
+	req := new(msg.HttpRequest)
 	for { // keep scanning TCP connection fd for persistent connection
-		req := new(msg.HttpRequest)
-		scanner.Scan() // scan one line from the buffer filled by fd
-		err := scanner.Err()
-		if err != nil {
-			c.logger.Warn(err.Error())
-		} else {
-			err = req.Next(scanner.Text()) // parse into [HttpRequest] line by line
+		if scanner.Scan() { // scan one line from the buffer filled by fd
+			err := scanner.Err()
 			if err != nil {
 				c.logger.Warn(err.Error())
-				req = new(msg.HttpRequest)
+			} else {
+				err = req.Next(scanner.Text()) // parse into [HttpRequest] line by line
+				if err != nil {
+					c.logger.Warn(err.Error())
+					req = new(msg.HttpRequest)
+				}
 			}
+		} else {
+			req.Complete()
 		}
 
 		if req.IsReady() { // if ready then send to router

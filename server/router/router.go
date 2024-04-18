@@ -8,6 +8,12 @@ type Router struct {
 	routes []map[string]RouterAction // An array of map for each method ordered as [get, post, put, delete]
 }
 
+type Route interface {
+	To(*msg.HttpRequest, *RouterResult)
+	ContainRoute(method msg.HttpMethod, route string) bool
+	AddRoute(method msg.HttpMethod, route string, action RouterAction) error
+}
+
 type RouterResult struct {
 	Response  *msg.HttpResponse // response from [RouterAction]
 	CloseConn bool              // if "Connection" header has "close" as value

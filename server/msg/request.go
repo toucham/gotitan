@@ -64,7 +64,7 @@ func NewRequest(msg string) (*HttpRequest, error) {
 type RequestBuildState int
 
 const (
-	REQUESTLINE_BS RequestBuildState = iota + 1
+	REQUESTLINE_BS RequestBuildState = iota
 	HEADERS_BS
 	BODY_BS
 	COMPLETE_BS
@@ -87,21 +87,27 @@ func (req *HttpRequest) Next(line string) error {
 			return errors.New("incorrect HTTP version, currently only support 1.1")
 		}
 
-		req.buildState += 1
+		req.buildState = HEADERS_BS
 	case HEADERS_BS:
-		if line == "" || line == "\n" {
-			req.buildState += 1
-		}
+		// if line == "" || line == "\n" {
+		req.buildState = BODY_BS
+		// }
 	case BODY_BS:
-		if line == "" || line == "\n" {
-			req.buildState += 1
-		}
+		// if line == "" || line == "\n" {
+		req.buildState = COMPLETE_BS
+		// }
 	case COMPLETE_BS:
 		return errors.New("complete state should not be called")
 	default:
 		return errors.New("unknown [HttpRequest] build state")
 	}
 	return nil
+}
+
+func (req *HttpRequest) Complete() {
+	if req.buildState == HEADERS_BS {
+		req.buildState = COMPLETE_BS
+	}
 }
 
 func (req *HttpRequest) IsReady() bool {
