@@ -9,6 +9,8 @@ import (
 	"github.com/toucham/gotitan/server/router"
 )
 
+const CHANNEL_BUFFER = 5
+
 // for managing TCP connection to align with HTTP/1.1
 type HttpConn struct {
 	conn    net.Conn                  // TCP connection
@@ -20,7 +22,7 @@ type HttpConn struct {
 
 // create connection manager
 func HandleConn(conn net.Conn, r *router.Router, timeout int32) *HttpConn {
-	queue := make(chan *router.RouterResult)
+	queue := make(chan *router.RouterResult, CHANNEL_BUFFER) // set buffer size to not block read
 	logger := logger.New("HttpConn")
 	return &HttpConn{conn, timeout, queue, r, logger}
 }
@@ -44,8 +46,10 @@ func (c *HttpConn) Read() {
 		}
 
 		if req.IsReady() { // if ready then send to router
-			go c.route.To(req, c.channel) // send request to route
-			req = new(msg.HttpRequest)    // refresh new request
+			result := router.CreateResult(req)
+			c.channel <- result
+			go c.route.To(req, result) // send request to route
+			req = new(msg.HttpRequest) // refresh new request
 		}
 	}
 
@@ -54,8 +58,8 @@ func (c *HttpConn) Read() {
 // Write send HTTP response back to the client in-order of the request
 func (c *HttpConn) Write() {
 	writer := bufio.NewWriter(c.conn)
-	for {
-		result := <-c.channel // retrieve first element
+	for result := range c.channel {
+		<-result.Ready // block to execute in order
 		// TODO: add logic to do smth from fields in [RouterResult] (ex: close connection)
 
 		// send HTTP response

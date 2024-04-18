@@ -9,8 +9,9 @@ type Router struct {
 }
 
 type RouterResult struct {
-	Response  *msg.HttpResponse
-	CloseConn bool
+	Response  *msg.HttpResponse // response from [RouterAction]
+	CloseConn bool              // if "Connection" header has "close" as value
+	Ready     chan bool         // if data in channel, then result is ready to be sent
 }
 
 func New() Router {
@@ -28,8 +29,7 @@ func (r *Router) ContainRoute(method msg.HttpMethod, route string) bool {
 }
 
 // Route [HttpRequest] to the correct action depending on the path
-func (r *Router) To(req *msg.HttpRequest, res chan *RouterResult) {
-	result := createResult(req)
+func (r *Router) To(req *msg.HttpRequest, result *RouterResult) {
 	var action RouterAction
 	switch req.GetMethod() {
 	case msg.HTTP_GET:
@@ -41,19 +41,20 @@ func (r *Router) To(req *msg.HttpRequest, res chan *RouterResult) {
 	case msg.HTTP_DELETE:
 		action = r.routes[3][req.GetPath()]
 	default:
-		res <- nil
+		result.Ready <- false
 	}
 	if action == nil {
 		result.Response = new(msg.HttpResponse).SetStatus(404)
 	} else {
 		result.Response = action(req)
 	}
-	res <- result
+	result.Ready <- true
 }
 
-func createResult(req *msg.HttpRequest) *RouterResult {
+func CreateResult(req *msg.HttpRequest) *RouterResult {
 	// parse header and create result accordingly
 	return &RouterResult{
 		CloseConn: false,
+		Ready:     make(chan bool),
 	}
 }
