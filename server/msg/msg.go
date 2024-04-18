@@ -1,6 +1,7 @@
 package msg
 
 import (
+	"github.com/toucham/gotitan/logger"
 	"github.com/toucham/gotitan/server/url"
 )
 
@@ -19,6 +20,7 @@ type HttpMessage struct {
 	body    string
 	url     *url.Url
 	version string
+	logger  logger.Logger
 }
 
 // getter method for body field in HttpRequest

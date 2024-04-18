@@ -1,14 +1,16 @@
 package server
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"net"
 
 	"github.com/toucham/gotitan/logger"
-	"github.com/toucham/gotitan/server/msg"
+	"github.com/toucham/gotitan/server/conn"
 	"github.com/toucham/gotitan/server/router"
+)
+
+const (
+	TIMEOUT = 10000 // ms (default at 10s)
 )
 
 type HttpServer struct {
@@ -50,56 +52,16 @@ func Init(host string, port string) *HttpServer {
 func (s *HttpServer) Start() {
 	defer s.ln.Close()
 
-	// TODO: add logging for # of middlwares, port, ip address
 	for {
-		c, err := s.ln.Accept() // accepts a TCP connection on the listener
-		if err != nil {
-			fmt.Println(err)
+		// blocking: accepts a TCP connection
+		if c, err := s.ln.Accept(); err != nil {
+			s.logger.Fatal(err.Error())
+		} else {
+			connHandler := conn.HandleConn(c, &s.Router, TIMEOUT)
+			go connHandler.Read()
+			// TODO: optimize to only respond when request is completed (write on-demand)
+			go connHandler.Write()
 		}
-
-		// concurrently handle connections
-		go s.handleConn(c) // connection is on another fd (accepting conn opens a new fd)
 	}
-
-}
-
-func (s *HttpServer) handleConn(c net.Conn) {
-	// TODO: how to manage connection?
-	defer c.Close()                                       // defer to close TCP connection
-	message, err := bufio.NewReader(c).ReadString(('\n')) // wraps the tcp conn with reader and read msg
-	if err != io.EOF && err != nil {
-		s.logger.Warn(err.Error())
-		return
-	}
-
-	req, err := msg.NewRequest(message) // instantiate [HttpRequest] from msg
-	if err != nil {
-		s.logger.Warn("Unable to instantiate [HttpRequest]: %s", err.Error())
-		return
-	}
-
-	// process middlware
-	processMiddleware(req)
-
-	// routing
-	res := s.To(req)
-
-	resString, err := res.String() // convert to string to send to socket
-	if err != nil {
-		s.logger.Warn(err.Error())
-		return
-	}
-
-	writer := bufio.NewWriter(c)                            // create buffered writer from net.Conn
-	if _, err = writer.WriteString(resString); err != nil { // write the [HttpResponse] to buffer
-		s.logger.Warn(err.Error())
-		return
-	} else {
-		s.logger.Debug("Respond to client")
-		writer.Flush() // respond to client (write to socket)
-	}
-}
-
-func processMiddleware(req *msg.HttpRequest) {
 
 }

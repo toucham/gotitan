@@ -10,6 +10,7 @@ import (
 
 type HttpRequest struct {
 	HttpMessage
+	buildState RequestBuildState
 }
 
 // parse raw data to instantiate HttpRequest according to HTTP/1.1
@@ -58,4 +59,51 @@ func NewRequest(msg string) (*HttpRequest, error) {
 	}
 
 	return req, nil
+}
+
+type RequestBuildState int
+
+const (
+	REQUESTLINE_BS RequestBuildState = iota + 1
+	HEADERS_BS
+	BODY_BS
+	COMPLETE_BS
+)
+
+// create [HttpRequest] of each line
+func (req *HttpRequest) Next(line string) error {
+	switch req.buildState {
+	case REQUESTLINE_BS:
+		requestLine := strings.Split(line, " ")
+
+		if len(requestLine) != 3 {
+			return errors.New("incorrect string to parse in request-line")
+		}
+		req.method = HttpMethod(strings.ToLower(requestLine[0]))
+		req.url = url.NewFromReqLine(requestLine[1])
+		req.version = requestLine[2]
+
+		if req.version != "HTTP/1.1" {
+			return errors.New("incorrect HTTP version, currently only support 1.1")
+		}
+
+		req.buildState += 1
+	case HEADERS_BS:
+		if line == "" || line == "\n" {
+			req.buildState += 1
+		}
+	case BODY_BS:
+		if line == "" || line == "\n" {
+			req.buildState += 1
+		}
+	case COMPLETE_BS:
+		return errors.New("complete state should not be called")
+	default:
+		return errors.New("unknown [HttpRequest] build state")
+	}
+	return nil
+}
+
+func (req *HttpRequest) IsReady() bool {
+	return req.buildState == COMPLETE_BS
 }

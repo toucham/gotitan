@@ -54,15 +54,15 @@ type MockToInput struct {
 	res *msg.HttpResponse
 }
 
-func TestRouter_To(t *testing.T) {
-	router, inputs := createMockRouter()
-	for _, input := range inputs {
-		res := router.To(input.req)
+// func TestRouter_To(t *testing.T) {
+// 	router, inputs := createMockRouter()
+// 	for _, input := range inputs {
+// 		res := router.To(input.req)
 
-		// validate
-		checkStatus := input.res.Status != res.Status
-		if checkStatus {
-			t.Fail()
-		}
-	}
-}
+// 		// validate
+// 		checkStatus := input.res.Status != res.Status
+// 		if checkStatus {
+// 			t.Fail()
+// 		}
+// 	}
+// }

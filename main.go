@@ -1,6 +1,11 @@
 package main
 
-import "github.com/toucham/gotitan/server"
+import (
+	"fmt"
+
+	"github.com/toucham/gotitan/server"
+	"github.com/toucham/gotitan/server/msg"
+)
 
 func main() {
 	PORT := "8080"
@@ -13,13 +18,13 @@ func main() {
 	// }, server.MiddlwareOptions{})
 
 	// add routing
-	// indexAction := func(req *server.HttpRequest) *server.HttpResponse {
-	// 	fmt.Printf("Received request for method: %s", req.GetMethod())
-	// 	fmt.Printf("With body: %s", req.GetBody())
-	// 	return nil
-	// }
-	// app.AddRoute(server.HTTP_POST, "/", indexAction)
-	// app.AddRoute(server.HTTP_GET, "/", indexAction)
+	indexAction := func(req *msg.HttpRequest) *msg.HttpResponse {
+		fmt.Printf("Received request for method: %s", req.GetMethod())
+		fmt.Printf("With body: %s", req.GetBody())
+		return new(msg.HttpResponse).SetStatus(400)
+	}
+	app.AddRoute(msg.HTTP_POST, "/", indexAction)
+	app.AddRoute(msg.HTTP_GET, "/", indexAction)
 
 	app.Start()
 }
