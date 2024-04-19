@@ -2,19 +2,25 @@ package msg
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/toucham/gotitan/logger"
 	"github.com/toucham/gotitan/server/url"
 )
 
+type RequestHeaders struct {
+	ContentLength int
+}
+
 type HttpRequest struct {
 	HttpMessage
 	buildState RequestBuildState
+	headers    RequestHeaders
 }
 
 // parse raw data to instantiate HttpRequest according to HTTP/1.1
-func NewRequest(msg string) (*HttpRequest, error) {
+func NewRequestFromMsg(msg string) (*HttpRequest, error) {
 	req := new(HttpRequest)
 	req.Headers = make(map[string]string)
 
@@ -24,14 +30,12 @@ func NewRequest(msg string) (*HttpRequest, error) {
 	// 1) get request line
 	requestLine := strings.Split(lines[0], " ")
 	if len(requestLine) != 3 {
-		logger.Fatal("Message have %d words; there must be 3", len(requestLine))
 		return nil, errors.New("incorrect string to parse in request-line")
 	}
 	req.method = HttpMethod(strings.ToLower(requestLine[0]))
 	req.url = url.NewFromReqLine(requestLine[1])
 	req.version = requestLine[2]
 	if req.version != "HTTP/1.1" {
-		logger.Fatal("HTTP request is of version %s", req.version)
 		return nil, errors.New("incorrect HTTP version, currently only support 1.1")
 	}
 
@@ -47,7 +51,7 @@ func NewRequest(msg string) (*HttpRequest, error) {
 		if len(kv) == 2 {
 			req.Headers[kv[0]] = kv[1]
 		} else {
-			logger.Info("Incorrect header format: %s", field)
+			logger.Debug("Incorrect header format: %s", field)
 		}
 	}
 
@@ -70,6 +74,12 @@ const (
 	COMPLETE_BS
 )
 
+func NewRequest() *HttpRequest {
+	req := new(HttpRequest)
+	req.Headers = make(map[string]string)
+	return req
+}
+
 // create [HttpRequest] of each line
 func (req *HttpRequest) Next(line string) error {
 	switch req.buildState {
@@ -89,13 +99,25 @@ func (req *HttpRequest) Next(line string) error {
 
 		req.buildState = HEADERS_BS
 	case HEADERS_BS:
-		// if line == "" || line == "\n" {
-		req.buildState = BODY_BS
-		// }
+		if line == "" { // if there is a body
+			req.buildState = BODY_BS
+		} else {
+			headers := strings.Split(line, ":")
+			key := strings.ToLower(strings.TrimSpace(headers[0]))
+			value := strings.TrimSpace(headers[1])
+			req.Headers[key] = value
+			req.addKnownHeaders(key, value)
+		}
 	case BODY_BS:
-		// if line == "" || line == "\n" {
-		req.buildState = COMPLETE_BS
-		// }
+		contentLength := req.headers.ContentLength
+		if contentLength > len(req.body) {
+			req.body += line
+			if contentLength > len(req.body) {
+				req.body += "\n"
+			} else {
+				req.buildState = COMPLETE_BS
+			}
+		}
 	case COMPLETE_BS:
 		return errors.New("complete state should not be called")
 	default:
@@ -105,11 +127,23 @@ func (req *HttpRequest) Next(line string) error {
 }
 
 func (req *HttpRequest) Complete() {
-	if req.buildState == HEADERS_BS {
+	hasNoBody := req.buildState == HEADERS_BS && req.body == "" && req.headers.ContentLength == 0
+	if hasNoBody || req.buildState == BODY_BS {
 		req.buildState = COMPLETE_BS
 	}
 }
 
 func (req *HttpRequest) IsReady() bool {
 	return req.buildState == COMPLETE_BS
+}
+
+func (req *HttpRequest) addKnownHeaders(key string, value string) {
+	switch key {
+	case "content-length":
+		i, err := strconv.Atoi(value)
+		if err == nil {
+			req.headers.ContentLength = i
+		}
+	}
+
 }
