@@ -27,35 +27,66 @@ func HandleConn(conn net.Conn, r router.Route, timeout int32) *HttpConn {
 	return &HttpConn{conn, timeout, queue, r, logger}
 }
 
-// Read parse app-layer message into [HttpRequest] and execute [Router.To()]
+// Read parse app-layer message into [HttpRequest] and execute [Router.To()].
+// Have added support for pipelining; however, most browser doesn't support pipelining.
 func (c *HttpConn) Read() {
 	scanner := bufio.NewScanner(c.conn)
-	scanner.Split(bufio.ScanLines)
-	req := new(msg.HttpRequest)
-	for { // keep scanning TCP connection fd for persistent connection
-		if scanner.Scan() { // scan one line from the buffer filled by fd
-			err := scanner.Err()
-			if err != nil {
-				c.logger.Warn(err.Error())
+	scanner.Split(bufio.ScanBytes)
+	state := msg.REQUESTLINE_BS
+	req := msg.NewRequest()
+	line := ""
+	for scanner.Scan() { // keep scanning TCP connection fd for persistent connection
+		char := scanner.Text()
+		switch state {
+		case msg.REQUESTLINE_BS:
+			if char != "\n" {
+				line += char
 			} else {
-				err = req.Next(scanner.Text()) // parse into [HttpRequest] line by line
-				if err != nil {
+				err := req.AddRequestLine(line) // parse into [HttpRequest] line by line
+				if err != nil {                 // if parsed fail then discard
 					c.logger.Warn(err.Error())
-					req = new(msg.HttpRequest)
+				} else {
+					state = msg.HEADERS_BS
+					line = ""
 				}
 			}
-		} else {
-			req.Complete()
+		case msg.HEADERS_BS:
+			if char != "\n" {
+				line += char
+			} else if line == "" { // ending headers
+				if req.Headers.ContentLength > 0 { // expect body
+					state = msg.BODY_BS
+				} else {
+					state = msg.COMPLETE_BS
+				}
+			} else { // if not an empty line then is a header
+				err := req.AddHeader(line)
+				if err != nil { // if parsed fail then discard
+					c.logger.Warn(err.Error())
+				}
+				line = ""
+			}
+		case msg.BODY_BS:
+			if len(line) < req.Headers.ContentLength {
+				line += char
+			} else if len(line) == req.Headers.ContentLength {
+				req.AddBody(line)
+			} else {
+				c.logger.Warn("length of body is longer than content-length")
+			}
+		default:
+			c.logger.Warn("Unrecognized state during building request")
 		}
 
-		if req.IsReady() { // if ready then send to router
+		// check at every byte scan since after body there is no token that signifies ending of message
+		if state == msg.COMPLETE_BS {
 			result := router.CreateResult(req)
 			c.channel <- result
 			go c.route.To(req, result) // send request to route
-			req = new(msg.HttpRequest) // refresh new request
+			req = msg.NewRequest()     // refresh new request
+			state = msg.REQUESTLINE_BS
 		}
 	}
-
 }
 
 // Write send HTTP response back to the client in-order of the request

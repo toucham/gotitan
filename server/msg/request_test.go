@@ -3,7 +3,6 @@ package msg
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 )
 
@@ -61,9 +60,9 @@ func checkAnswer(req *HttpRequest, mr *MockRequests) error {
 		errorMsg := fmt.Sprintf("Incorrect uri: %s", req.GetUri())
 		return errors.New(errorMsg)
 	}
-	checkHeaders := len(req.Headers) == mr.headersLen
+	checkHeaders := len(req.headers) == mr.headersLen
 	if !checkHeaders {
-		errorMsg := fmt.Sprintf("Incorrect len of headers: %d", len(req.Headers))
+		errorMsg := fmt.Sprintf("Incorrect len of headers: %d", len(req.headers))
 		return errors.New(errorMsg)
 	}
 	checkBody := req.GetBody() == mr.body
@@ -84,30 +83,6 @@ func TestNewRequest(t *testing.T) {
 		err = checkAnswer(req, &mr)
 		if err != nil {
 			t.Error(err)
-		}
-	}
-}
-
-// expect to call Next() for each line and end with Complete()
-func TestNextAndComplete(t *testing.T) {
-	mockReq := createMockRequests()
-	for i, mr := range mockReq {
-		req := NewRequest()
-		lines := strings.Split(mr.mock, "\n")
-		for _, line := range lines {
-			if err := req.Next(line); err != nil {
-				t.Fatal(err)
-			}
-		}
-		req.Complete()
-
-		if !req.IsReady() {
-			t.Fatalf("request at index %d is not ready", i)
-		} else {
-			err := checkAnswer(req, &mr)
-			if err != nil {
-				t.Error(err)
-			}
 		}
 	}
 }

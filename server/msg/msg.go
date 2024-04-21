@@ -14,7 +14,7 @@ const (
 )
 
 type HttpMessage struct {
-	Headers map[string]string
+	headers map[string]string
 	method  HttpMethod
 	body    string
 	url     *url.Url
