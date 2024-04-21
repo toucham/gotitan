@@ -92,11 +92,18 @@ func (c *HttpConn) Read() {
 		if state == msg.COMPLETE_BS {
 			result := router.CreateResult(req)
 			c.channel <- result
-			go c.route.To(req, result) // send request to route
-			req = msg.NewRequest()     // refresh new request
-			state = msg.REQUESTLINE_BS
+			if req.IsSafeMethod() {
+				go c.route.To(req, result) // send request to route
+				req = msg.NewRequest()     // refresh new request
+				state = msg.REQUESTLINE_BS
+			} else {
+				// stop reading on this connection
+				c.route.To(req, result)
+				break
+			}
 		}
 	}
+	close(c.channel)
 }
 
 // Write send HTTP response back to the client in-order of the request
@@ -104,8 +111,6 @@ func (c *HttpConn) Write() {
 	writer := bufio.NewWriter(c.conn)
 	for result := range c.channel {
 		<-result.Ready // block to execute in order
-		// TODO: add logic to do smth from fields in [RouterResult] (ex: close connection)
-
 		// send HTTP response
 		res := result.Response
 		if res, err := res.String(); err != nil {
@@ -119,5 +124,8 @@ func (c *HttpConn) Write() {
 				writer.Flush() // respond to client (write to socket)
 			}
 		}
+	}
+	if err := c.conn.Close(); err != nil {
+		c.logger.Warn(err.Error())
 	}
 }

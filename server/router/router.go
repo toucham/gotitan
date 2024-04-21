@@ -16,7 +16,7 @@ type Route interface {
 
 type RouterResult struct {
 	Response  *msg.HttpResponse // response from [RouterAction]
-	CloseConn bool              // if "Connection" header has "close" as value
+	CloseConn bool              // should close connection after sending response
 	Ready     chan bool         // if data in channel, then result is ready to be sent
 }
 

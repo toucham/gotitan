@@ -7,10 +7,13 @@ import (
 type HttpMethod string
 
 const (
-	HTTP_GET    HttpMethod = "get"
-	HTTP_POST   HttpMethod = "post"
-	HTTP_DELETE HttpMethod = "delete"
-	HTTP_PUT    HttpMethod = "put"
+	HTTP_GET     HttpMethod = "get"
+	HTTP_POST    HttpMethod = "post"
+	HTTP_DELETE  HttpMethod = "delete"
+	HTTP_PUT     HttpMethod = "put"
+	HTTP_OPTIONS HttpMethod = "options"
+	HTTP_TRACE   HttpMethod = "trace"
+	HTTP_HEAD    HttpMethod = "head"
 )
 
 type HttpMessage struct {
@@ -39,4 +42,11 @@ func (r *HttpMessage) GetUri() string {
 // getter method for path in HttpRequest
 func (r *HttpMessage) GetPath() string {
 	return r.url.String() // TODO: change to get path
+}
+
+func (r *HttpMessage) IsSafeMethod() bool {
+	return r.method == HTTP_GET ||
+		r.method == HTTP_OPTIONS ||
+		r.method == HTTP_TRACE ||
+		r.method == HTTP_HEAD
 }

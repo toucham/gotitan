@@ -23,13 +23,7 @@ Content-Length: 91
 Please visit www.example.re for the latest updates!
 Another cool body. Hopefully this works`
 
-const MOCK_PIPELINE_REQUEST = `POST /help.txt HTTP/1.1
-Host: www.example.re
-Content-Type: text/plain
-Content-Length: 91
-
-Please visit www.example.re for the latest updates!
-Another cool body. Hopefully this worksGET /index.html HTTP/1.1
+const MOCK_PIPELINE_REQUEST = `GET /index.html HTTP/1.1
 Host: www.example.re
 User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
 
@@ -87,7 +81,6 @@ func createMockHttpConn(isCalled chan bool, log *MockLogger) (HttpConn, net.Conn
 	}, input
 }
 
-// TODO: create unit test for Read()
 func TestRead(t *testing.T) {
 	isCalled := make(chan bool)
 	mockLogger := MockLogger{T: t}
@@ -108,28 +101,41 @@ func TestRead(t *testing.T) {
 	}
 }
 
+// TODO: create test to be able to discard incorrect HTTP message
+
+// incorrect first request (no newline)
+// expect: discard first and second message
+const MOCK_WRONG_PIPELINE_REQUEST = `GET /index.html HTTP/1.1
+Host: www.example.re
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
+GET /index.html HTTP/1.1
+Host: www.example.re
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
+
+`
+
+// incorrect second request (not safe method)
+// expect: discard first and second message
+const MOCK_WRONG_PIPELINE_WITH_POST_REQUEST = `GET /index.html HTTP/1.1
+Host: www.example.re
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
+
+POST /help.txt HTTP/1.1
+Host: www.example.re
+Content-Type: text/plain
+Content-Length: 91
+
+Please visit www.example.re for the latest updates!
+Another cool body. Hopefully this works
+
+GET /index.html HTTP/1.1
+Host: www.example.re
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
+
+`
+
 // should discard request if http request is in incorrect format
 func TestReadIncorrectRequestDiscard(t *testing.T) {
-}
-
-func TestReadPersistConnection(t *testing.T) {
-	isCalled := make(chan bool)
-	mockLogger := MockLogger{T: t}
-	mock, input := createMockHttpConn(isCalled, &mockLogger)
-	writer := bufio.NewWriter(input)
-
-	mockReqs := []string{MOCK_POST_REQUEST, MOCK_GET_REQUEST}
-	for _, r := range mockReqs {
-		if _, err := writer.WriteString(r); err != nil {
-			t.Fatal("test failed; unable to write")
-		}
-	}
-	go func() {
-		writer.Flush()
-		input.Close()
-	}()
-	go mock.Read()
-	<-isCalled
 }
 
 // TODO: create unit test for Write()
