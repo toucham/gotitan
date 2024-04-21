@@ -95,7 +95,7 @@ func (req *HttpRequest) AddRequestLine(line string) error {
 }
 
 func (req *HttpRequest) AddHeader(line string) error {
-	headers := strings.Split(line, ":")
+	headers := strings.SplitN(line, ":", 2)
 	if len(headers) != 2 {
 		return errors.New("headers are split into more than two elements")
 	}

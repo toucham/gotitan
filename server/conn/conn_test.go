@@ -18,10 +18,25 @@ User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
 const MOCK_POST_REQUEST = `POST /help.txt HTTP/1.1
 Host: www.example.re
 Content-Type: text/plain
-Content-Length: 90
+Content-Length: 91
 
 Please visit www.example.re for the latest updates!
-Another cool body. Hopefully this works
+Another cool body. Hopefully this works`
+
+const MOCK_PIPELINE_REQUEST = `POST /help.txt HTTP/1.1
+Host: www.example.re
+Content-Type: text/plain
+Content-Length: 91
+
+Please visit www.example.re for the latest updates!
+Another cool body. Hopefully this worksGET /index.html HTTP/1.1
+Host: www.example.re
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
+
+GET /index.html HTTP/1.1
+Host: www.example.re
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
+
 `
 
 type MockRoute struct {
@@ -77,7 +92,7 @@ func TestRead(t *testing.T) {
 	isCalled := make(chan bool)
 	mockLogger := MockLogger{T: t}
 
-	mockReqs := []string{MOCK_POST_REQUEST}
+	mockReqs := []string{MOCK_PIPELINE_REQUEST}
 	for _, r := range mockReqs {
 		mock, input := createMockHttpConn(isCalled, &mockLogger)
 		writer := bufio.NewWriter(input)
@@ -91,6 +106,10 @@ func TestRead(t *testing.T) {
 		go mock.Read()
 		<-isCalled
 	}
+}
+
+// should discard request if http request is in incorrect format
+func TestReadIncorrectRequestDiscard(t *testing.T) {
 }
 
 func TestReadPersistConnection(t *testing.T) {
