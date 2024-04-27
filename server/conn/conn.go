@@ -13,18 +13,19 @@ const CHANNEL_BUFFER = 5
 
 // for managing TCP connection to align with HTTP/1.1
 type HttpConn struct {
-	conn    net.Conn                  // TCP connection
-	timeout int32                     // connection timeout in ms
-	channel chan *router.RouterResult // queue response to return in correct order
-	route   router.Route
-	logger  logger.Logger
+	conn         net.Conn                   // TCP connection
+	timeout      int32                      // connection timeout in ms
+	channel      chan *router.RouterContext // queue response to return in correct order
+	isSafeMethod bool                       // determines whether
+	route        router.Route
+	logger       logger.Logger
 }
 
 // create connection manager
 func HandleConn(conn net.Conn, r router.Route, timeout int32) *HttpConn {
-	queue := make(chan *router.RouterResult, CHANNEL_BUFFER) // set buffer size to not block read
+	queue := make(chan *router.RouterContext, CHANNEL_BUFFER) // set buffer size to not block read
 	logger := logger.New("HttpConn")
-	return &HttpConn{conn, timeout, queue, r, logger}
+	return &HttpConn{conn, timeout, queue, true, r, logger}
 }
 
 // TODO: add validation so that it will reset parsing during pipelining
@@ -37,6 +38,7 @@ func (c *HttpConn) Read() {
 	state := msg.REQUESTLINE_BS
 	req := msg.NewRequest()
 	line := ""
+	var err error
 	for scanner.Scan() { // keep scanning TCP connection fd for persistent connection
 		char := scanner.Text()
 		switch state {
@@ -44,8 +46,8 @@ func (c *HttpConn) Read() {
 			if char != "\n" {
 				line += char
 			} else {
-				err := req.AddRequestLine(line) // parse into [HttpRequest] line by line
-				if err != nil {                 // if parsed fail then discard
+				err = req.AddRequestLine(line) // parse into [HttpRequest] line by line
+				if err != nil {                // if parsed fail then discard
 					c.logger.Warn(err.Error())
 				} else {
 					state = msg.HEADERS_BS
@@ -62,7 +64,7 @@ func (c *HttpConn) Read() {
 					state = msg.COMPLETE_BS
 				}
 			} else { // if not an empty line then is a header
-				err := req.AddHeader(line)
+				err = req.AddHeader(line)
 				if err != nil { // if parsed fail then discard
 					c.logger.Warn(err.Error())
 					state = msg.REQUESTLINE_BS
@@ -74,7 +76,7 @@ func (c *HttpConn) Read() {
 				line += char
 			}
 			if len(line) == req.Headers.ContentLength {
-				err := req.AddBody(line)
+				err = req.AddBody(line)
 				if err != nil { // if parsed fail then discard
 					c.logger.Warn(err.Error())
 					state = msg.REQUESTLINE_BS
@@ -88,18 +90,23 @@ func (c *HttpConn) Read() {
 			line = ""
 		}
 
+		// stop reading if msg sent in wront format
+		if err != nil {
+			break
+		}
+
 		// check at every byte scan since after body there is no token that signifies ending of message
 		if state == msg.COMPLETE_BS {
-			result := router.CreateResult(req)
-			c.channel <- result
-			if req.IsSafeMethod() {
-				go c.route.To(req, result) // send request to route
-				req = msg.NewRequest()     // refresh new request
+			ctx := router.CreateContext(req)
+			c.channel <- ctx
+			if req.IsSafeMethod() && c.isSafeMethod {
+				go c.route.To(req, ctx) // send request to route
+				req = msg.NewRequest()  // refresh new request
 				state = msg.REQUESTLINE_BS
 			} else {
+				c.isSafeMethod = false
 				// stop reading on this connection
-				c.route.To(req, result)
-				break
+				c.route.To(req, ctx)
 			}
 		}
 	}

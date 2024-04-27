@@ -9,15 +9,16 @@ type Router struct {
 }
 
 type Route interface {
-	To(*msg.HttpRequest, *RouterResult)
+	To(*msg.HttpRequest, *RouterContext)
 	ContainRoute(method msg.HttpMethod, route string) bool
 	AddRoute(method msg.HttpMethod, route string, action RouterAction) error
 }
 
-type RouterResult struct {
+type RouterContext struct {
 	Response  *msg.HttpResponse // response from [RouterAction]
 	CloseConn bool              // should close connection after sending response
 	Ready     chan bool         // if data in channel, then result is ready to be sent
+	request   *msg.HttpRequest
 }
 
 func New() Router {
@@ -35,7 +36,7 @@ func (r *Router) ContainRoute(method msg.HttpMethod, route string) bool {
 }
 
 // Route [HttpRequest] to the correct action depending on the path
-func (r *Router) To(req *msg.HttpRequest, result *RouterResult) {
+func (r *Router) To(req *msg.HttpRequest, result *RouterContext) {
 	var action RouterAction
 	switch req.GetMethod() {
 	case msg.HTTP_GET:
@@ -57,10 +58,11 @@ func (r *Router) To(req *msg.HttpRequest, result *RouterResult) {
 	result.Ready <- true
 }
 
-func CreateResult(req *msg.HttpRequest) *RouterResult {
+func CreateContext(req *msg.HttpRequest) *RouterContext {
 	// parse header and create result accordingly
-	return &RouterResult{
+	return &RouterContext{
 		CloseConn: false,
 		Ready:     make(chan bool),
+		request:   req,
 	}
 }
