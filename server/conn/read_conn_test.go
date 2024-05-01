@@ -148,7 +148,7 @@ func TestReadCloseConnection(t *testing.T) {
 // TEST: Discard incorrect requests
 
 // incorrect first request (no newline)
-// expect: discard first and second message
+// expect: close connection
 const MOCK_INCORRECT_FORMAT_REQ = `Host: www.example.re
 User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
 GET /index.html HTTP/1.1
@@ -157,8 +157,7 @@ User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
 
 `
 
-// should discard request if http request is in incorrect format
-func TestReadIncorrectRequestDiscard(t *testing.T) {
+func TestReadIncorrectCloseConn(t *testing.T) {
 	mockLogger := MockLogger{T: t}
 
 	mock, input, ch := createMockHttpConn(&mockLogger)
@@ -191,7 +190,7 @@ User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
 POST /help.txt HTTP/1.1
 Host: www.example.re
 Content-Type: text/plain
-Content-Length: 91
+Content-Length: 92
 
 Please visit www.example.re for the latest updates!
 Another cool body. Hopefully this works
@@ -199,7 +198,12 @@ GET /index.html HTTP/1.1
 Host: www.example.re
 User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
 
-`
+POST /help.txt HTTP/1.1
+Host: www.example.re
+Content-Type: text/plain
+Content-Length: 6
+
+Please`
 
 func TestReadUnsafeMethod(t *testing.T) {
 	mockLogger := MockLogger{T: t}
@@ -211,22 +215,22 @@ func TestReadUnsafeMethod(t *testing.T) {
 	} else {
 		go func() {
 			writer.Flush()
+			mock.conn.Close()
 		}()
 	}
 	go mock.Read()
 
-	count := 0
-	for {
-		_, ok := <-ch
+	count := 1
+	for ; ; count++ {
+		ctx, ok := <-ch
 		if !ok {
 			break
 		}
-		count++
+		<-ctx.Ready
 	}
 
-	// TODO: is there a way to test it is not use gouritine
-	if !mock.isSafeMethod {
-		t.Errorf("Still considered as safe method")
+	if mock.isSafePipeline {
+		t.Errorf("Should be considered as safe method")
 	}
 	if count == 4 {
 		t.Errorf("There should be 4 requests sent to Route.To()")

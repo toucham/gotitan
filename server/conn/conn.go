@@ -13,12 +13,12 @@ const CHANNEL_BUFFER = 5
 
 // for managing TCP connection to align with HTTP/1.1
 type HttpConn struct {
-	conn         net.Conn                   // TCP connection
-	timeout      int32                      // connection timeout in ms
-	channel      chan *router.RouterContext // queue response to return in correct order
-	isSafeMethod bool                       // determines whether
-	route        router.Route
-	logger       logger.Logger
+	conn           net.Conn                   // TCP connection
+	timeout        int32                      // connection timeout in ms
+	queue          chan *router.RouterContext // queue response to return in correct order
+	isSafePipeline bool                       // determine whether there is only safe methods from all the received requests
+	route          router.Route
+	logger         logger.Logger
 }
 
 // create connection manager
@@ -98,25 +98,24 @@ func (c *HttpConn) Read() {
 		// check at every byte scan since after body there is no token that signifies ending of message
 		if state == msg.COMPLETE_BS {
 			ctx := router.CreateContext(req)
-			c.channel <- ctx
-			if req.IsSafeMethod() && c.isSafeMethod {
+			c.queue <- ctx
+			if req.IsSafeMethod() && c.isSafePipeline {
 				go c.route.To(req, ctx) // send request to route
-				req = msg.NewRequest()  // refresh new request
-				state = msg.REQUESTLINE_BS
 			} else {
-				c.isSafeMethod = false
-				// stop reading on this connection
-				c.route.To(req, ctx)
+				c.isSafePipeline = false
+				c.route.To(req, ctx) // stop reading on this connection
 			}
+			req = msg.NewRequest() // refresh new request
+			state = msg.REQUESTLINE_BS
 		}
 	}
-	close(c.channel)
+	close(c.queue) // close channel
 }
 
 // Write send HTTP response back to the client in-order of the request
 func (c *HttpConn) Write() {
 	writer := bufio.NewWriter(c.conn)
-	for result := range c.channel {
+	for result := range c.queue {
 		<-result.Ready // block to execute in order
 		// send HTTP response
 		res := result.Response

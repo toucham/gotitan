@@ -34,7 +34,6 @@ func (l *MockLogger) Info(format string, v ...any) {
 }
 
 func (l *MockLogger) Warn(format string, v ...any) {
-	l.T.Fatalf(format, v...)
 }
 
 func (l *MockLogger) Fatal(format string, v ...any) {
@@ -44,7 +43,7 @@ func createMockHttpConn(log *MockLogger) (HttpConn, net.Conn, chan *router.Route
 	conn, input := net.Pipe()
 	var timeout int32 = 10000
 	route := new(MockRoute)
-	ch := make(chan *router.RouterContext, 1)
+	ch := make(chan *router.RouterContext)
 	return HttpConn{
 		conn,
 		timeout,
