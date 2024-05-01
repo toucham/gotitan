@@ -15,10 +15,10 @@ type Route interface {
 }
 
 type RouterContext struct {
-	Response  *msg.HttpResponse // response from [RouterAction]
-	CloseConn bool              // should close connection after sending response
-	Ready     chan bool         // if data in channel, then result is ready to be sent
-	request   *msg.HttpRequest
+	Response  msg.Response // response from [RouterAction]
+	CloseConn bool         // should close connection after sending response
+	Ready     chan bool    // if data in channel, then result is ready to be sent
+	request   msg.Request  // request from [HttpConn.Read()]
 }
 
 func New() Router {
@@ -51,7 +51,8 @@ func (r *Router) To(req *msg.HttpRequest, result *RouterContext) {
 		result.Ready <- false
 	}
 	if action == nil {
-		result.Response = new(msg.HttpResponse).SetStatus(404)
+		res := new(msg.HttpResponse)
+		result.Response = res
 	} else {
 		result.Response = action(req)
 	}

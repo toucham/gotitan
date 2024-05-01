@@ -2,6 +2,7 @@ package conn
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 
 	"github.com/toucham/gotitan/logger"
@@ -115,23 +116,22 @@ func (c *HttpConn) Read() {
 // Write send HTTP response back to the client in-order of the request
 func (c *HttpConn) Write() {
 	writer := bufio.NewWriter(c.conn)
-	for result := range c.queue {
+	for result := range c.queue { // will break from loop when channel is closed
 		<-result.Ready // block to execute in order
 		// send HTTP response
 		res := result.Response
-		if res, err := res.String(); err != nil {
+		msg := res.String()
+		if _, err := writer.WriteString(msg); err != nil { // write the [HttpResponse] to buffer
 			c.logger.Warn(err.Error())
+			break
 		} else {
-			if _, err := writer.WriteString(res); err != nil { // write the [HttpResponse] to buffer
-				c.logger.Warn(err.Error())
-				return
-			} else {
-				c.logger.Debug("Respond to client")
-				writer.Flush() // respond to client (write to socket)
-			}
+			c.logger.Debug("Respond to client")
+			writer.Flush() // respond to client (write to socket)
 		}
 	}
-	if err := c.conn.Close(); err != nil {
+
+	if err := c.conn.Close(); err != nil { // close connection
 		c.logger.Warn(err.Error())
 	}
+	fmt.Print("close")
 }

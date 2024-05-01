@@ -18,6 +18,12 @@ type HttpRequest struct {
 	Headers RequestHeaders
 }
 
+type Request interface {
+	AddRequestLine(string) error
+	AddHeader(string) error
+	AddBody(string) error
+}
+
 // parse raw data to instantiate HttpRequest according to HTTP/1.1
 func NewRequestFromMsg(msg string) (*HttpRequest, error) {
 	req := new(HttpRequest)
