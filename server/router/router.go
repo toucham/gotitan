@@ -2,7 +2,7 @@ package router
 
 import "github.com/toucham/gotitan/server/msg"
 
-type RouterAction func(req *msg.HttpRequest) *msg.HttpResponse
+type RouterAction func(req msg.Request) msg.Response
 
 type Router struct {
 	routes []map[string]RouterAction // An array of map for each method ordered as [get, post, put, delete]
@@ -18,7 +18,7 @@ type RouterContext struct {
 	Response  msg.Response // response from [RouterAction]
 	CloseConn bool         // should close connection after sending response
 	Ready     chan bool    // if data in channel, then result is ready to be sent
-	request   msg.Request  // request from [HttpConn.Read()]
+	Request   msg.Request  // request from [HttpConn.Read()]
 }
 
 func New() Router {
@@ -64,6 +64,6 @@ func CreateContext(req *msg.HttpRequest) *RouterContext {
 	return &RouterContext{
 		CloseConn: false,
 		Ready:     make(chan bool),
-		request:   req,
+		Request:   req,
 	}
 }

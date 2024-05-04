@@ -24,24 +24,37 @@ type HttpMessage struct {
 	version string
 }
 
-// getter method for body field in HttpRequest
+type Message interface {
+	GetMethod() HttpMethod
+	GetBody() string
+	GetPath() string
+	GetUri() string
+	GetVersion() string
+}
+
+// getter method for body field in HttpMessage
 func (r *HttpMessage) GetBody() string {
 	return r.body
 }
 
-// getter method for HTTP method in HttpRequest
+// getter method for HTTP method in HttpMessage
 func (r *HttpMessage) GetMethod() HttpMethod {
 	return r.method
 }
 
-// getter method for uri in HttpRequest
+// getter method for uri in HttpMessage
 func (r *HttpMessage) GetUri() string {
 	return r.url.String()
 }
 
-// getter method for path in HttpRequest
+// getter method for path in HttpMessage
 func (r *HttpMessage) GetPath() string {
 	return r.url.String() // TODO: change to get path
+}
+
+// getter method for HTTP version in HttpMessage
+func (r *HttpMessage) GetVersion() string {
+	return r.version // TODO: change to get path
 }
 
 func (r *HttpMessage) IsSafeMethod() bool {

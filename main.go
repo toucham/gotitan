@@ -18,10 +18,10 @@ func main() {
 	// }, server.MiddlwareOptions{})
 
 	// add routing
-	indexAction := func(req *msg.HttpRequest) *msg.HttpResponse {
+	indexAction := func(req msg.Request) msg.Response {
 		fmt.Printf("Received request for method: %s", req.GetMethod())
 		fmt.Printf("With body: %s", req.GetBody())
-		return new(msg.HttpResponse).SetStatus(400)
+		return new(msg.HttpResponse)
 	}
 	app.AddRoute(msg.HTTP_POST, "/", indexAction)
 	app.AddRoute(msg.HTTP_GET, "/", indexAction)

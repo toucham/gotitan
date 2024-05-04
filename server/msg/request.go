@@ -19,6 +19,7 @@ type HttpRequest struct {
 }
 
 type Request interface {
+	Message
 	AddRequestLine(string) error
 	AddHeader(string) error
 	AddBody(string) error

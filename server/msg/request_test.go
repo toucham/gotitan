@@ -3,6 +3,7 @@ package msg
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -73,7 +74,7 @@ func checkAnswer(req *HttpRequest, mr *MockRequests) error {
 	return nil
 }
 
-func TestNewRequest(t *testing.T) {
+func TestNewRequestFromMsg(t *testing.T) {
 	mockRequests := createMockRequests()
 	for _, mr := range mockRequests {
 		req, err := NewRequestFromMsg(mr.mock)
@@ -83,6 +84,43 @@ func TestNewRequest(t *testing.T) {
 		err = checkAnswer(req, &mr)
 		if err != nil {
 			t.Error(err)
+		}
+	}
+}
+
+func TestAddHeader(t *testing.T) {
+	headers := strings.Split(MOCK_POST_REQUEST, "\n")[1:]
+	req := NewRequest()
+	for _, line := range headers {
+		if line == "" {
+			break
+		}
+		req.AddHeader(line)
+	}
+	if req.Headers.ContentLength == 0 {
+		t.Fatal("content lenght is 0 when it is not supposed to")
+	}
+	if len(req.headers) != 3 {
+		t.Fatalf("there are less than expected headers: %d", len(req.headers))
+	}
+}
+
+func TestAddRequestLine(t *testing.T) {
+	inputs := []string{MOCK_GET_REQUEST, MOCK_POST_REQUEST}
+	mockReq := createMockRequests()
+	for i, input := range inputs {
+		req := NewRequest()
+		rl := strings.Split(input, "\n")[0]
+		t.Logf("request line: %s", rl)
+		req.AddRequestLine(rl)
+		if req.GetMethod() != mockReq[i].method {
+			t.Fatalf("method is not the same: %s", req.GetMethod())
+		}
+		if req.GetUri() != mockReq[i].uri {
+			t.Fatalf("uri is not the same: %s", req.GetUri())
+		}
+		if req.GetVersion() != "HTTP/1.1" {
+			t.Fatalf("uri is not the same: %s", req.GetVersion())
 		}
 	}
 }

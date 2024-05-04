@@ -37,7 +37,7 @@ func TestRouter_AddRouter(t *testing.T) {
 	}
 
 	for _, input := range mockInput {
-		router.AddRoute(input.method, input.route, func(req *msg.HttpRequest) *msg.HttpResponse {
+		router.AddRoute(input.method, input.route, func(req msg.Request) msg.Response {
 			return nil
 		})
 	}
