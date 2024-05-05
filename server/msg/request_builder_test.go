@@ -1,8 +1,6 @@
 package msg
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 	"testing"
 )
@@ -50,53 +48,17 @@ func createMockRequests() []MockRequests {
 	}
 }
 
-func checkAnswer(req *HttpRequest, mr *MockRequests) error {
-	checkMethod := req.GetMethod() == mr.method
-	if !checkMethod {
-		errorMsg := fmt.Sprintf("Incorrect method: %s", req.GetMethod())
-		return errors.New(errorMsg)
-	}
-	checkUri := req.GetUri() == mr.uri
-	if !checkUri {
-		errorMsg := fmt.Sprintf("Incorrect uri: %s", req.GetUri())
-		return errors.New(errorMsg)
-	}
-	checkHeaders := len(req.headers) == mr.headersLen
-	if !checkHeaders {
-		errorMsg := fmt.Sprintf("Incorrect len of headers: %d", len(req.headers))
-		return errors.New(errorMsg)
-	}
-	checkBody := req.GetBody() == mr.body
-	if !checkBody {
-		errorMsg := fmt.Sprintf("Incorrect body: %s", req.GetBody())
-		return errors.New(errorMsg)
-	}
-	return nil
-}
-
-func TestNewRequestFromMsg(t *testing.T) {
-	mockRequests := createMockRequests()
-	for _, mr := range mockRequests {
-		req, err := NewRequestFromMsg(mr.mock)
-		if err != nil {
-			t.Error(err)
-		}
-		err = checkAnswer(req, &mr)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-}
-
 func TestAddHeader(t *testing.T) {
 	headers := strings.Split(MOCK_POST_REQUEST, "\n")[1:]
-	req := NewRequest()
+	reqBuilder := NewHttpReqBuilder()
+	reqBuilder.state = HeadersBuildState
 	for _, line := range headers {
 		if line == "" {
 			break
 		}
-		req.AddHeader(line)
+		reqBuilder.AddHeader(line)
 	}
+	req := reqBuilder.request
 	if req.Headers.ContentLength == 0 {
 		t.Fatal("content lenght is 0 when it is not supposed to")
 	}
@@ -109,10 +71,14 @@ func TestAddRequestLine(t *testing.T) {
 	inputs := []string{MOCK_GET_REQUEST, MOCK_POST_REQUEST}
 	mockReq := createMockRequests()
 	for i, input := range inputs {
-		req := NewRequest()
+		reqBuilder := NewHttpReqBuilder()
 		rl := strings.Split(input, "\n")[0]
 		t.Logf("request line: %s", rl)
-		req.AddRequestLine(rl)
+		reqBuilder.AddRequestLine(rl)
+		if reqBuilder.state != HeadersBuildState {
+			t.Fatalf("unexpected state: %d", reqBuilder.state)
+		}
+		req := reqBuilder.request
 		if req.GetMethod() != mockReq[i].method {
 			t.Fatalf("method is not the same: %s", req.GetMethod())
 		}

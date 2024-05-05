@@ -226,6 +226,6 @@ func TestReadUnsafeMethod(t *testing.T) {
 		t.Errorf("Should be considered as safe method")
 	}
 	if count == 4 {
-		t.Errorf("There should be 4 requests sent to Route.To()")
+		t.Errorf("There should be 4 requests send to Route.To()")
 	}
 }

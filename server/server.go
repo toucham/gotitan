@@ -48,20 +48,20 @@ func Init(host string, port string) *HttpServer {
 	return &s
 }
 
-// start the webserver
+// Start start the http server to listen on the designated port
 func (s *HttpServer) Start() {
-	defer s.ln.Close()
+	defer s.ln.Close() // listen on the designated {s.port}
 
 	for {
-		// blocking: accepts a TCP connection
+		// block process until it accepts a TCP connection
 		if c, err := s.ln.Accept(); err != nil {
 			s.logger.Fatal(err.Error())
+			return
 		} else {
 			connHandler := conn.HandleConn(c, &s.Router, TIMEOUT)
-			go connHandler.Read()
-			// TODO: optimize to only respond when request is completed (write on-demand)
-			go connHandler.Write()
+			// create two goroutines for each connection
+			go connHandler.Read()  // reading from fd
+			go connHandler.Write() // writing to fd
 		}
 	}
-
 }

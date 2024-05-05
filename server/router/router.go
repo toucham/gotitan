@@ -9,7 +9,7 @@ type Router struct {
 }
 
 type Route interface {
-	To(*msg.HttpRequest, *RouterContext)
+	To(msg.Request, *RouterContext)
 	ContainRoute(method msg.HttpMethod, route string) bool
 	AddRoute(method msg.HttpMethod, route string, action RouterAction) error
 }
@@ -36,7 +36,7 @@ func (r *Router) ContainRoute(method msg.HttpMethod, route string) bool {
 }
 
 // Route [HttpRequest] to the correct action depending on the path
-func (r *Router) To(req *msg.HttpRequest, result *RouterContext) {
+func (r *Router) To(req msg.Request, result *RouterContext) {
 	var action RouterAction
 	switch req.GetMethod() {
 	case msg.HTTP_GET:
@@ -59,7 +59,7 @@ func (r *Router) To(req *msg.HttpRequest, result *RouterContext) {
 	result.Ready <- true
 }
 
-func CreateContext(req *msg.HttpRequest) *RouterContext {
+func CreateContext(req msg.Request) *RouterContext {
 	// parse header and create result accordingly
 	return &RouterContext{
 		CloseConn: false,

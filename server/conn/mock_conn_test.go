@@ -10,7 +10,7 @@ import (
 type MockRoute struct {
 }
 
-func (m *MockRoute) To(msg *msg.HttpRequest, r *router.RouterContext) {
+func (m *MockRoute) To(msg msg.Request, r *router.RouterContext) {
 	r.Ready <- true
 }
 
@@ -49,6 +49,7 @@ func createMockHttpConn() (HttpConn, net.Conn) {
 		true,
 		route,
 		new(MockLogger),
+		msg.NewHttpReqBuilder(),
 	}, input
 }
 

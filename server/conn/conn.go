@@ -2,6 +2,7 @@ package conn
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 
@@ -20,84 +21,64 @@ type HttpConn struct {
 	isSafePipeline bool                       // determine whether there is only safe methods from all the received requests
 	route          router.Route
 	logger         logger.Logger
+	reqBuilder     msg.RequestBuilder
 }
 
 // create connection manager
 func HandleConn(conn net.Conn, r router.Route, timeout int32) *HttpConn {
 	queue := make(chan *router.RouterContext, CHANNEL_BUFFER) // set buffer size to not block read
 	logger := logger.New("HttpConn")
-	return &HttpConn{conn, timeout, queue, true, r, logger}
+	req := msg.NewHttpReqBuilder()
+	return &HttpConn{conn, timeout, queue, true, r, logger, req}
 }
 
-// TODO: add validation so that it will reset parsing during pipelining
+// TODO: separate parser from scanning data from IO
 
-// Read parse app-layer message into [HttpRequest] and execute [Router.To()].
-// Have added support for pipelining; however, most browser doesn't support pipelining.
+// Read convert raw message into [Request] and passes it to [Router.To()].
 func (c *HttpConn) Read() {
 	scanner := bufio.NewScanner(c.conn)
-	scanner.Split(bufio.ScanBytes)
-	state := msg.REQUESTLINE_BS
-	req := msg.NewRequest()
-	line := ""
+	scanner.Split(bufio.ScanBytes) // scan by a sequence of octet
+	line := ""                     // HTTP message is separated by CRLF until reaches HTTP body
 	var err error
-	for scanner.Scan() { // keep scanning TCP connection fd for persistent connection
-		char := scanner.Text()
-		switch state {
-		case msg.REQUESTLINE_BS:
+
+	for scanner.Scan() {
+		char := scanner.Text() // convert the byte into string
+
+		switch c.reqBuilder.State() {
+		case msg.RequestLineBuildState: // parse request-line
 			if char != "\n" {
 				line += char
 			} else {
-				err = req.AddRequestLine(line) // parse into [HttpRequest] line by line
-				if err != nil {                // if parsed fail then discard
-					c.logger.Warn(err.Error())
-				} else {
-					state = msg.HEADERS_BS
-				}
+				err = c.reqBuilder.AddRequestLine(line) // parse into [HttpRequest] line by line
 				line = ""
 			}
-		case msg.HEADERS_BS:
+		case msg.HeadersBuildState:
 			if char != "\n" {
 				line += char
-			} else if line == "" { // ending headers
-				if req.Headers.ContentLength > 0 { // expect body
-					state = msg.BODY_BS
-				} else {
-					state = msg.COMPLETE_BS
-				}
 			} else { // if not an empty line then is a header
-				err = req.AddHeader(line)
-				if err != nil { // if parsed fail then discard
-					c.logger.Warn(err.Error())
-					state = msg.REQUESTLINE_BS
-				}
+				err = c.reqBuilder.AddHeader(line)
 				line = ""
 			}
-		case msg.BODY_BS: // TODO: add validation for not being request-line
-			if len(line) < req.Headers.ContentLength {
-				line += char
-			}
-			if len(line) == req.Headers.ContentLength {
-				err = req.AddBody(line)
-				if err != nil { // if parsed fail then discard
-					c.logger.Warn(err.Error())
-					state = msg.REQUESTLINE_BS
-				} else {
-					state = msg.COMPLETE_BS
-				}
-				line = ""
-			}
+		case msg.BodyBuildState: // TODO: add validation for not being request-line
+			line += char
+			err = c.reqBuilder.AddBody(line)
 		default:
-			c.logger.Warn("Unrecognized state during building request")
-			line = ""
+			err = errors.New("unrecognized state when building request")
 		}
 
 		// stop reading if msg sent in wront format
 		if err != nil {
+			c.logger.Warn(err.Error())
 			break
 		}
 
 		// check at every byte scan since after body there is no token that signifies ending of message
-		if state == msg.COMPLETE_BS {
+		if c.reqBuilder.State() == msg.CompleteBuildState {
+			req, err := c.reqBuilder.Build() // build request & reset builder
+			line = ""
+			if err != nil { // if an error when build, closes connection
+				break
+			}
 			ctx := router.CreateContext(req)
 			c.queue <- ctx
 			if req.IsSafeMethod() && c.isSafePipeline {
@@ -106,11 +87,9 @@ func (c *HttpConn) Read() {
 				c.isSafePipeline = false
 				c.route.To(req, ctx) // stop reading on this connection
 			}
-			req = msg.NewRequest() // refresh new request
-			state = msg.REQUESTLINE_BS
 		}
 	}
-	close(c.queue) // close channel
+	close(c.queue) // close channel + signal Write() to close channel
 }
 
 // Write send HTTP response back to the client in-order of the request
