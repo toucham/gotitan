@@ -47,9 +47,9 @@ func createMockHttpConn() (HttpConn, net.Conn) {
 		timeout,
 		queue,
 		true,
+		msg.NewHttpReqBuilder(),
 		route,
 		new(MockLogger),
-		msg.NewHttpReqBuilder(),
 	}, input
 }
 
@@ -59,6 +59,10 @@ type MockResult struct {
 }
 
 type MockResponse struct{}
+
+func (m MockResponse) SetBody(body string, contentType string) error {
+	return nil
+}
 
 const EXPECTED_RESP_STRING = "HTTP OK"
 

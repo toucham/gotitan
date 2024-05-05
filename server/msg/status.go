@@ -1,5 +1,7 @@
 package msg
 
+import "strconv"
+
 type HttpStatus int16
 
 const (
@@ -15,6 +17,7 @@ const (
 	// 4xx - Client Error
 	StatusBadRequest   HttpStatus = 400
 	StatusUnauthorized HttpStatus = 401
+	StatusNotFound     HttpStatus = 404
 
 	// 5xx - Server Error
 	StatusServerInternalError HttpStatus = 500
@@ -28,4 +31,25 @@ func (s HttpStatus) IsValid() bool {
 		return true
 	}
 	return false
+}
+
+func (s HttpStatus) String() string {
+	return strconv.Itoa(int(s))
+}
+
+func (s HttpStatus) GetReason() string {
+	switch s {
+	case StatusOk:
+		return "OK"
+	case StatusCreated:
+		return "Created"
+	case StatusBadRequest:
+		return "Bad Request"
+	case StatusServerInternalError:
+		return "Server Internal Error"
+	case StatusNotFound:
+		return "Not Found"
+	default:
+		return "Not Found Status"
+	}
 }

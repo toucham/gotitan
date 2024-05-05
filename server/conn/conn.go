@@ -3,7 +3,6 @@ package conn
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"net"
 
 	"github.com/toucham/gotitan/logger"
@@ -19,9 +18,9 @@ type HttpConn struct {
 	timeout        int32                      // connection timeout in ms
 	queue          chan *router.RouterContext // queue response to return in correct order
 	isSafePipeline bool                       // determine whether there is only safe methods from all the received requests
-	route          router.Route
-	logger         logger.Logger
-	reqBuilder     msg.RequestBuilder
+	reqBuilder     msg.RequestBuilder         // builder for creating [Request]
+	route          router.Route               // for routing request to correct [Action]
+	logger         logger.Logger              // logger for [HttpConn]
 }
 
 // create connection manager
@@ -29,10 +28,8 @@ func HandleConn(conn net.Conn, r router.Route, timeout int32) *HttpConn {
 	queue := make(chan *router.RouterContext, CHANNEL_BUFFER) // set buffer size to not block read
 	logger := logger.New("HttpConn")
 	req := msg.NewHttpReqBuilder()
-	return &HttpConn{conn, timeout, queue, true, r, logger, req}
+	return &HttpConn{conn, timeout, queue, true, req, r, logger}
 }
-
-// TODO: separate parser from scanning data from IO
 
 // Read convert raw message into [Request] and passes it to [Router.To()].
 func (c *HttpConn) Read() {
@@ -66,7 +63,7 @@ func (c *HttpConn) Read() {
 			err = errors.New("unrecognized state when building request")
 		}
 
-		// stop reading if msg sent in wront format
+		// stop reading if msg is in wrong format
 		if err != nil {
 			c.logger.Warn(err.Error())
 			break
@@ -97,6 +94,7 @@ func (c *HttpConn) Write() {
 	writer := bufio.NewWriter(c.conn)
 	for result := range c.queue { // will break from loop when channel is closed
 		<-result.Ready // block to execute in order
+
 		// send HTTP response
 		res := result.Response
 		msg := res.String()
@@ -112,5 +110,5 @@ func (c *HttpConn) Write() {
 	if err := c.conn.Close(); err != nil { // close connection
 		c.logger.Warn(err.Error())
 	}
-	fmt.Print("close")
+	c.logger.Debug("close connection")
 }
