@@ -25,11 +25,12 @@ func (r *HttpResponse) SetBody(body string, contentType string) error {
 func (r *HttpResponse) String() string {
 	statusLine := r.buildStatusLine()
 	headers := r.buildHeaders()
-	return statusLine + "\n" + headers + r.body
+	return statusLine + headers + r.body
 }
 
 func (r *HttpResponse) buildStatusLine() string {
-	return string(r.version) + " " + r.Status.String() + " " + r.Status.GetReason()
+	statusLine := fmt.Sprintf("%s %s %s\n", string(r.version), r.Status.String(), r.Status.GetReason())
+	return statusLine
 }
 
 func (r *HttpResponse) buildHeaders() string {
@@ -43,8 +44,29 @@ func (r *HttpResponse) buildHeaders() string {
 	return headers
 }
 
-func NewResponse() *HttpResponse {
+func NewHttpResponse() *HttpResponse {
 	return &HttpResponse{
 		Headers: DefaultResponseHeader(),
+	}
+}
+
+func ServerErrorResponse() *HttpResponse {
+	return &HttpResponse{
+		Headers: DefaultResponseHeader(),
+		Status:  StatusServerInternalError,
+	}
+}
+
+func BadRequestResponse() *HttpResponse {
+	return &HttpResponse{
+		Headers: DefaultResponseHeader(),
+		Status:  StatusBadRequest,
+	}
+}
+
+func NotFoundResponse() *HttpResponse {
+	return &HttpResponse{
+		Headers: DefaultResponseHeader(),
+		Status:  StatusNotFound,
 	}
 }

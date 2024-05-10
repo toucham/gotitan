@@ -63,10 +63,14 @@ func (c *HttpConn) Read() {
 			err = errors.New("unrecognized state when building request")
 		}
 
-		// stop reading if msg is in wrong format
+		// error from bad request (message in wrong format)
 		if err != nil {
 			c.logger.Warn(err.Error())
-			break
+
+			ctx := router.CreateContext()
+			c.queue <- ctx       // send a bad request status response
+			c.route.To(nil, ctx) // send nil to let route knows it's a bad request
+			break                // stop reading if msg is in wrong format
 		}
 
 		// check at every byte scan since after body there is no token that signifies ending of message
@@ -76,7 +80,7 @@ func (c *HttpConn) Read() {
 			if err != nil { // if an error when build, closes connection
 				break
 			}
-			ctx := router.CreateContext(req)
+			ctx := router.CreateContext()
 			c.queue <- ctx
 			if req.IsSafeMethod() && c.isSafePipeline {
 				go c.route.To(req, ctx) // send request to route
@@ -97,6 +101,9 @@ func (c *HttpConn) Write() {
 
 		// send HTTP response
 		res := result.Response
+		if res == nil {
+			res = msg.ServerErrorResponse()
+		}
 		msg := res.String()
 		if _, err := writer.WriteString(msg); err != nil { // write the [HttpResponse] to buffer
 			c.logger.Warn(err.Error())

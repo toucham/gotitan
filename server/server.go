@@ -58,6 +58,7 @@ func (s *HttpServer) Start() {
 			s.logger.Fatal(err.Error())
 			return
 		} else {
+			// create a connection handler
 			connHandler := conn.HandleConn(c, &s.Router, TIMEOUT)
 			// create two goroutines for each connection
 			go connHandler.Read()  // reading from fd
