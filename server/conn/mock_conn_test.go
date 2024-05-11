@@ -1,8 +1,6 @@
 package conn
 
 import (
-	"net"
-
 	"github.com/toucham/gotitan/server/msg"
 	"github.com/toucham/gotitan/server/router"
 )
@@ -11,7 +9,10 @@ type MockRoute struct {
 }
 
 func (m *MockRoute) To(msg msg.Request, r *router.RouterContext) {
-	r.Ready <- true
+	if msg == nil {
+		r.Response = nil
+	}
+	close(r.Done)
 }
 
 func (r *MockRoute) AddRoute(method msg.HttpMethod, route string, action router.RouterAction) error {
@@ -37,22 +38,6 @@ func (l *MockLogger) Warn(format string, v ...any) {
 func (l *MockLogger) Fatal(format string, v ...any) {
 }
 
-func createMockHttpConn() (HttpConn, net.Conn) {
-	conn, input := net.Pipe()
-	var timeout int32 = 10000
-	route := new(MockRoute)
-	queue := make(chan *router.RouterContext)
-	return HttpConn{
-		conn,
-		timeout,
-		queue,
-		true,
-		msg.NewHttpReqBuilder(),
-		route,
-		new(MockLogger),
-	}, input
-}
-
 type MockResult struct {
 	Mock      string
 	NumOfReqs int
@@ -74,6 +59,6 @@ func createMockCtx() router.RouterContext {
 	res := MockResponse{}
 	return router.RouterContext{
 		Response: res,
-		Ready:    make(chan bool),
+		Done:     make(chan struct{}),
 	}
 }

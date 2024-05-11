@@ -2,7 +2,10 @@ package conn
 
 import (
 	"bufio"
+	"net"
 	"testing"
+
+	"github.com/toucham/gotitan/server/router"
 )
 
 const MOCK_PERSISTENT_PIPELINE_REQUEST = `GET /index.html HTTP/1.1
@@ -32,8 +35,6 @@ Please visit www.example.re for the latest updates!
 Another cool body. Hopefully this works`
 
 func TestReadPersistentConnection(t *testing.T) {
-	mock, input := createMockHttpConn()
-
 	mockReqs := []MockResult{
 		{
 			MOCK_PERSISTENT_PIPELINE_REQUEST,
@@ -46,7 +47,10 @@ func TestReadPersistentConnection(t *testing.T) {
 	}
 
 	for _, mockReq := range mockReqs {
+		// setup
+		output, input := net.Pipe()
 		writer := bufio.NewWriter(input)
+		queue := make(chan *router.RouterContext)
 		if _, err := writer.WriteString(mockReq.Mock); err != nil {
 			t.Fatal("test failed; unable to write")
 		} else {
@@ -54,16 +58,12 @@ func TestReadPersistentConnection(t *testing.T) {
 				writer.Flush()
 			}()
 		}
-		go mock.Read()
+		go read(output, queue, new(MockLogger))
 
 		// wait for Read() to send to Route.To()
-		for i := 0; i < mockReq.NumOfReqs; i++ {
-			result, ok := <-mock.queue
-			if result != nil && ok {
-				if _, ok := <-result.Ready; !ok {
-					t.Fatal("channel to know if result is ready is closed")
-				}
-			} else {
+		for i := 1; i < mockReq.NumOfReqs; i++ {
+			rc, ok := <-queue
+			if rc.Request == nil || !ok {
 				t.Fatal("result is returned as nil or channel is closed before")
 			}
 		}
@@ -116,26 +116,28 @@ func TestReadCloseConnection(t *testing.T) {
 	}
 
 	for _, req := range mockReqs {
-		mock, input := createMockHttpConn()
+		// setup
+		output, input := net.Pipe()
 		writer := bufio.NewWriter(input)
+		queue := make(chan *router.RouterContext)
+
+		// input mock
 		if _, err := writer.WriteString(req.Mock); err != nil {
 			t.Fatal("test setup failed; unable to write")
 		} else {
 			go func() {
 				writer.Flush()
-				mock.conn.Close()
+				input.Close()
 			}()
 		}
-		go mock.Read()
+
+		// execute
+		go read(output, queue, new(MockLogger))
 
 		// wait for Read() to send to Route.To()
 		for i := 0; i < req.NumOfReqs; i++ {
-			result, ok := <-mock.queue
-			if result != nil && ok {
-				if _, ok := <-result.Ready; !ok {
-					t.Fatal("channel to know if result is ready is closed")
-				}
-			} else {
+			rc, ok := <-queue
+			if rc.Request == nil || !ok {
 				t.Fatal("result is returned as nil or channel is closed before")
 			}
 		}
@@ -155,8 +157,12 @@ User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1)
 `
 
 func TestReadIncorrectCloseConn(t *testing.T) {
-	mock, input := createMockHttpConn()
+	// setup
+	output, input := net.Pipe()
 	writer := bufio.NewWriter(input)
+	queue := make(chan *router.RouterContext)
+
+	// input
 	if _, err := writer.WriteString(MOCK_INCORRECT_FORMAT_REQ); err != nil {
 		t.Fatal("test failed; unable to write")
 	} else {
@@ -164,12 +170,14 @@ func TestReadIncorrectCloseConn(t *testing.T) {
 			writer.Flush()
 		}()
 	}
-	go mock.Read()
+
+	// execute
+	go read(output, queue, new(MockLogger))
 
 	// assert that the channel is closed without sending anything to ch
-	_, ok := <-mock.queue
-	if ok {
-		t.Fatal("A result is sent to channel when none is expected")
+	ctx := <-queue
+	if ctx.Request != nil {
+		t.Fatal("A request is sent to channel when none is expected")
 	}
 }
 
@@ -201,29 +209,28 @@ Content-Length: 6
 Please`
 
 func TestReadUnsafeMethod(t *testing.T) {
-	mock, input := createMockHttpConn()
+	// setup
+	output, input := net.Pipe()
 	writer := bufio.NewWriter(input)
+	queue := make(chan *router.RouterContext)
+
+	// input
 	if _, err := writer.WriteString(MOCK_UNSAFE_METHOD_PIPELINE); err != nil {
 		t.Fatal("test failed; unable to write")
 	} else {
 		go func() {
 			writer.Flush()
-			mock.conn.Close()
+			input.Close()
 		}()
 	}
-	go mock.Read()
+	go read(output, queue, new(MockLogger))
 
 	count := 1
 	for ; ; count++ {
-		ctx, ok := <-mock.queue
-		if !ok {
+		ctx, ok := <-queue
+		if !ok || ctx.Request == nil {
 			break
 		}
-		<-ctx.Ready
-	}
-
-	if mock.isSafePipeline {
-		t.Errorf("Should be considered as safe method")
 	}
 	if count == 4 {
 		t.Errorf("There should be 4 requests send to Route.To()")

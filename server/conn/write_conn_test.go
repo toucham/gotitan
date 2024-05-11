@@ -5,6 +5,8 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"github.com/toucham/gotitan/server/router"
 )
 
 func readFromNet(conn net.Conn, ch chan<- string, len int) {
@@ -23,38 +25,40 @@ func readFromNet(conn net.Conn, ch chan<- string, len int) {
 }
 
 func TestWriteResponseInPersistentChannel(t *testing.T) {
-	httpConn, netConn := createMockHttpConn()
-	go httpConn.Write()
+	writeTo, readFrom := net.Pipe()
+	channel := make(chan *router.RouterContext)
+	go write(writeTo, channel, new(MockLogger))
 
 	// sends input
 	ctx := createMockCtx()
-	httpConn.queue <- &ctx
-	ctx.Ready <- true
+	channel <- &ctx
+	close(ctx.Done)
 
 	result := make(chan string)
-	go readFromNet(netConn, result, len(EXPECTED_RESP_STRING))
+	go readFromNet(readFrom, result, len(EXPECTED_RESP_STRING))
 	select {
 	case got := <-result:
 		if EXPECTED_RESP_STRING != got {
 			t.Fatal("Not expected string")
 		}
 	case <-time.After(2 * time.Second):
-		t.Fatal("timeout after a second")
+		t.Fatal("timeout after 2 seconds")
 	}
 }
 
 func TestWriteResponseInClosedChannel(t *testing.T) {
-	httpConn, netConn := createMockHttpConn()
-	go httpConn.Write()
+	writeTo, readFrom := net.Pipe()
+	channel := make(chan *router.RouterContext)
+	go write(writeTo, channel, new(MockLogger))
 
 	// sends input
 	ctx := createMockCtx()
-	httpConn.queue <- &ctx
-	ctx.Ready <- true
-	close(httpConn.queue)
+	channel <- &ctx
+	close(ctx.Done)
+	close(channel)
 
 	result := make(chan string)
-	readFromNet(netConn, result, len(EXPECTED_RESP_STRING)+1)
+	readFromNet(readFrom, result, len(EXPECTED_RESP_STRING)+1)
 	got := <-result
 	if EXPECTED_RESP_STRING != got {
 		t.Fatal("Not expected string")

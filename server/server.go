@@ -59,10 +59,7 @@ func (s *HttpServer) Start() {
 			return
 		} else {
 			// create a connection handler
-			connHandler := conn.HandleConn(c, &s.Router, TIMEOUT)
-			// create two goroutines for each connection
-			go connHandler.Read()  // reading from fd
-			go connHandler.Write() // writing to fd
+			go conn.HandleConn(c, &s.Router, logger.New("HandleConn"), TIMEOUT)
 		}
 	}
 }
