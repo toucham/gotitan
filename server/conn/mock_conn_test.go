@@ -8,7 +8,7 @@ import (
 type MockRoute struct {
 }
 
-func (m *MockRoute) To(msg msg.Request, r *router.RouterContext) {
+func (m *MockRoute) To(msg msg.Request, r *routerContext) {
 	if msg == nil {
 		r.Response = nil
 	}
@@ -55,9 +55,9 @@ func (r MockResponse) String() string {
 	return EXPECTED_RESP_STRING
 }
 
-func createMockCtx() router.RouterContext {
+func createMockCtx() routerContext {
 	res := MockResponse{}
-	return router.RouterContext{
+	return routerContext{
 		Response: res,
 		Done:     make(chan struct{}),
 	}

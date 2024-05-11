@@ -11,17 +11,9 @@ type Router struct {
 }
 
 type Route interface {
-	To(*RouterContext)
+	To(msg.Request) msg.Response
 	ContainRoute(method msg.HttpMethod, route string) bool
 	AddRoute(method msg.HttpMethod, route string, action RouterAction) error
-}
-
-// RouterContext implements the [context.Context] interface for passing in message info across goroutines
-type RouterContext struct {
-	Request   msg.Request   // request from read()
-	Response  msg.Response  // response from [RouterAction]
-	CloseConn bool          // should close connection after sending response
-	Done      chan struct{} // if data in channel, then result is ready to be sent
 }
 
 func New() Router {
@@ -39,11 +31,10 @@ func (r *Router) ContainRoute(method msg.HttpMethod, route string) bool {
 }
 
 // Route [HttpRequest] to the correct action depending on the path
-func (r *Router) To(rc *RouterContext) {
-	defer close(rc.Done) // closes the channel at the end
-	req := rc.Request
+func (r *Router) To(req msg.Request) msg.Response {
+	// defer close(rc.Done) // closes the channel at the end
 	if req == nil {
-		rc.Response = msg.ServerErrorResponse()
+		return msg.ServerErrorResponse()
 	} else {
 		var action RouterAction
 
@@ -58,18 +49,9 @@ func (r *Router) To(rc *RouterContext) {
 			action = r.routes[3][req.GetPath()]
 		}
 		if action == nil {
-			rc.Response = msg.NotFoundResponse()
+			return msg.NotFoundResponse()
 		} else {
-			rc.Response = action(req)
+			return action(req)
 		}
-	}
-}
-
-func BuildContext(req msg.Request) *RouterContext {
-	// parse header and create result accordingly
-	return &RouterContext{
-		Request:   req,
-		CloseConn: false,
-		Done:      make(chan struct{}),
 	}
 }

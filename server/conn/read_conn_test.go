@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"net"
 	"testing"
-
-	"github.com/toucham/gotitan/server/router"
 )
 
 const MOCK_PERSISTENT_PIPELINE_REQUEST = `GET /index.html HTTP/1.1
@@ -50,7 +48,7 @@ func TestReadPersistentConnection(t *testing.T) {
 		// setup
 		output, input := net.Pipe()
 		writer := bufio.NewWriter(input)
-		queue := make(chan *router.RouterContext)
+		queue := make(chan *routerContext)
 		if _, err := writer.WriteString(mockReq.Mock); err != nil {
 			t.Fatal("test failed; unable to write")
 		} else {
@@ -119,7 +117,7 @@ func TestReadCloseConnection(t *testing.T) {
 		// setup
 		output, input := net.Pipe()
 		writer := bufio.NewWriter(input)
-		queue := make(chan *router.RouterContext)
+		queue := make(chan *routerContext)
 
 		// input mock
 		if _, err := writer.WriteString(req.Mock); err != nil {
@@ -160,7 +158,7 @@ func TestReadIncorrectCloseConn(t *testing.T) {
 	// setup
 	output, input := net.Pipe()
 	writer := bufio.NewWriter(input)
-	queue := make(chan *router.RouterContext)
+	queue := make(chan *routerContext)
 
 	// input
 	if _, err := writer.WriteString(MOCK_INCORRECT_FORMAT_REQ); err != nil {
@@ -212,7 +210,7 @@ func TestReadUnsafeMethod(t *testing.T) {
 	// setup
 	output, input := net.Pipe()
 	writer := bufio.NewWriter(input)
-	queue := make(chan *router.RouterContext)
+	queue := make(chan *routerContext)
 
 	// input
 	if _, err := writer.WriteString(MOCK_UNSAFE_METHOD_PIPELINE); err != nil {

@@ -5,8 +5,6 @@ import (
 	"net"
 	"testing"
 	"time"
-
-	"github.com/toucham/gotitan/server/router"
 )
 
 func readFromNet(conn net.Conn, ch chan<- string, len int) {
@@ -26,7 +24,7 @@ func readFromNet(conn net.Conn, ch chan<- string, len int) {
 
 func TestWriteResponseInPersistentChannel(t *testing.T) {
 	writeTo, readFrom := net.Pipe()
-	channel := make(chan *router.RouterContext)
+	channel := make(chan *routerContext)
 	go write(writeTo, channel, new(MockLogger))
 
 	// sends input
@@ -48,7 +46,7 @@ func TestWriteResponseInPersistentChannel(t *testing.T) {
 
 func TestWriteResponseInClosedChannel(t *testing.T) {
 	writeTo, readFrom := net.Pipe()
-	channel := make(chan *router.RouterContext)
+	channel := make(chan *routerContext)
 	go write(writeTo, channel, new(MockLogger))
 
 	// sends input
