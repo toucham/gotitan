@@ -59,7 +59,8 @@ func (s *HttpServer) Start() {
 			return
 		} else {
 			// create a connection handler
-			go conn.HandleConn(c, &s.Router, logger.New("HandleConn"), TIMEOUT)
+			httpConn := conn.NewConn(c, &s.Router)
+			go httpConn.HandleConn()
 		}
 	}
 }

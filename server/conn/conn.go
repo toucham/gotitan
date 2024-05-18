@@ -12,15 +12,31 @@ import (
 
 const CHANNEL_BUFFER = 5
 
+type HttpConn struct {
+	conn      net.Conn
+	route     router.Route
+	log       logger.Logger // logger within httpconn
+	timeoutMs int           // default timeout at 2s
+}
+
+func NewConn(c net.Conn, r *router.Router) *HttpConn {
+	return &HttpConn{
+		c,
+		r,
+		logger.New("HttpConn"),
+		2000,
+	}
+}
+
 // create connection handler that read from conn and write to conn when get response from router
-func HandleConn(conn net.Conn, r router.Route, l logger.Logger, timeout int32) {
+func (c *HttpConn) HandleConn() {
 	reqQueue := make(chan *routerContext, CHANNEL_BUFFER) // set buffer size to not block read
 	resQueue := make(chan *routerContext, CHANNEL_BUFFER) // set buffer size to not block read
 
 	// pipelining
-	go read(conn, reqQueue, l)      // read message and parse request from fd
-	go route(r, reqQueue, resQueue) // gets request from queue then pass to writer
-	go write(conn, resQueue, l)     // convert responses to msg and write to fd
+	go read(c.conn, reqQueue, c.log)      // read message and parse request from fd
+	go route(c.route, reqQueue, resQueue) // gets request from queue then pass to writer
+	go write(c.conn, resQueue, c.log)     // convert responses to msg and write to fd
 }
 
 // routerContext implements the [context.Context] interface for passing in message info across goroutines
@@ -42,6 +58,7 @@ func buildContext(req msg.Request) *routerContext {
 
 func route(r router.Route, source <-chan *routerContext, dest chan<- *routerContext) {
 	isSafePipeline := true
+	// for routing and closing [routerContext.Done] channel
 	goRoute := func(rc *routerContext) {
 		defer close(rc.Done)
 		rc.Response = r.To(rc.Request)
@@ -49,6 +66,7 @@ func route(r router.Route, source <-chan *routerContext, dest chan<- *routerCont
 
 	for rc := range source {
 		dest <- rc
+		// if request is safe method then pipeline
 		if rc.Request.IsSafeMethod() && isSafePipeline {
 			go goRoute(rc) // send request to route
 		} else {
