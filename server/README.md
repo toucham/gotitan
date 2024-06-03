@@ -2,7 +2,23 @@
 
 Implementing a simple HTTP WebServer in Go using only the `net` package that supports HTTP/1.1 according [RFC9110](https://www.rfc-editor.org/rfc/rfc9110.html) and [RFC9112](https://datatracker.ietf.org/doc/html/rfc9112).
 
-This is for educational purposes to get better understanding of Go programming language.
+## Motivation
+
+This is for educational purposes to better understand Golang and its set of tools. The is project is completed after the server is able handle the following requests using `curl`:
+
+```bash
+# GET
+curl 127.0.0.1:8080
+
+# POST
+
+# PUT
+
+# DELETE
+
+# Concurrent Requests
+
+```
 
 ## Server Features
 
@@ -11,7 +27,6 @@ These are the features that webserver is offering:
 - support HTTP/1.1
 - easy routing
 - able to concurrently process requests
-- apply middleware on both requests and responses
 - connection management (persistent connection, timeout, pipelining)
 
 ### HTTP/1.1
