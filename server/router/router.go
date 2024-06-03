@@ -1,6 +1,8 @@
 package router
 
 import (
+	"fmt"
+
 	"github.com/toucham/gotitan/server/msg"
 )
 
@@ -13,21 +15,50 @@ type Router struct {
 type Route interface {
 	To(msg.Request) msg.Response
 	ContainRoute(method msg.HttpMethod, route string) bool
-	AddRoute(method msg.HttpMethod, route string, action RouterAction) error
+	AddRoute(method msg.HttpMethod, route string, action RouterAction)
 }
 
 func New() Router {
+	r := make([]map[string]RouterAction, 4)
+	for i := range r {
+		r[i] = make(map[string]RouterAction)
+	}
 	return Router{
-		routes: make([]map[string]RouterAction, 4),
+		routes: r,
 	}
 }
 
-func (r *Router) AddRoute(method msg.HttpMethod, route string, action RouterAction) error {
-	return nil
+// Simple add route to dictionary
+func (r *Router) AddRoute(method msg.HttpMethod, route string, action RouterAction) {
+	switch method {
+	case msg.HTTP_GET:
+		r.routes[0][route] = action
+	case msg.HTTP_POST:
+		r.routes[1][route] = action
+	case msg.HTTP_PUT:
+		r.routes[2][route] = action
+	case msg.HTTP_DELETE:
+		r.routes[3][route] = action
+	default:
+		panic(fmt.Sprintf("Undefined method: %s", route))
+	}
 }
 
 func (r *Router) ContainRoute(method msg.HttpMethod, route string) bool {
-	return false
+	var action RouterAction = nil
+	switch method {
+	case msg.HTTP_GET:
+		action = r.routes[0][route]
+	case msg.HTTP_POST:
+		action = r.routes[1][route]
+	case msg.HTTP_PUT:
+		action = r.routes[2][route]
+	case msg.HTTP_DELETE:
+		action = r.routes[3][route]
+	default:
+		return false
+	}
+	return action != nil
 }
 
 // Route [HttpRequest] to the correct action depending on the path

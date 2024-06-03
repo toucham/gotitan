@@ -60,7 +60,7 @@ func (s *HttpServer) Start() {
 			return
 		} else {
 			// create a connection handler
-			s.logger.Debug("Accepted TCP connection...")
+			s.logger.Info("Accepted TCP connection...")
 			httpConn := conn.NewConn(c, &s.Router)
 			s.logger.Debug("Handling TCP connection...")
 			go httpConn.HandleConn()

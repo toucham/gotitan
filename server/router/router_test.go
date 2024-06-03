@@ -6,24 +6,6 @@ import (
 	"github.com/toucham/gotitan/server/msg"
 )
 
-func createMockRouter() (*Router, []MockToInput) {
-	inputs := []MockToInput{
-		MockToInput{
-			&msg.HttpRequest{},
-			&msg.HttpResponse{},
-		},
-		MockToInput{
-			&msg.HttpRequest{},
-			&msg.HttpResponse{},
-		},
-	}
-
-	// add fake action
-	router := New()
-
-	return &router, inputs
-}
-
 type MockAddRouterInput struct {
 	method msg.HttpMethod
 	route  string
@@ -32,8 +14,14 @@ type MockAddRouterInput struct {
 func TestRouter_AddRouter(t *testing.T) {
 	router := New()
 	mockInput := []MockAddRouterInput{
-		MockAddRouterInput{},
-		MockAddRouterInput{},
+		{
+			msg.HTTP_GET,
+			"/index",
+		},
+		{
+			msg.HTTP_POST,
+			"/route",
+		},
 	}
 
 	for _, input := range mockInput {
@@ -48,21 +36,3 @@ func TestRouter_AddRouter(t *testing.T) {
 		}
 	}
 }
-
-type MockToInput struct {
-	req *msg.HttpRequest
-	res *msg.HttpResponse
-}
-
-// func TestRouter_To(t *testing.T) {
-// 	router, inputs := createMockRouter()
-// 	for _, input := range inputs {
-// 		res := router.To(input.req)
-
-// 		// validate
-// 		checkStatus := input.res.Status != res.Status
-// 		if checkStatus {
-// 			t.Fail()
-// 		}
-// 	}
-// }
