@@ -19,9 +19,9 @@ const (
 )
 
 type HttpMessage struct {
-	headers map[string]string
 	body    string
 	url     *Uri
+	headers map[string]string
 	method  HttpMethod
 	version HttpVersion
 }

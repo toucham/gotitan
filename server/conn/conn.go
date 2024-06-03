@@ -3,6 +3,7 @@ package conn
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"net"
 
 	"github.com/toucham/gotitan/logger"
@@ -93,10 +94,11 @@ func read(conn net.Conn, queue chan<- *routerContext, l logger.Logger) {
 			if char != "\n" {
 				line += char
 			} else {
+				l.Debug(fmt.Sprintf("request-line: %s", line))
 				err = reqBuilder.AddRequestLine(line) // parse into [HttpRequest] line by line
 				line = ""
 			}
-		case msg.HeadersBuildState:
+		case msg.HeadersBuildState: // parse headers
 			if char != "\n" {
 				line += char
 			} else { // if not an empty line then is a header

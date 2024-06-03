@@ -23,8 +23,12 @@ func main() {
 		fmt.Printf("With body: %s", req.GetBody())
 		return new(msg.HttpResponse)
 	}
-	app.AddRoute(msg.HTTP_POST, "/", indexAction)
-	app.AddRoute(msg.HTTP_GET, "/", indexAction)
+	app.AddRoute(msg.HTTP_POST, "/", func(req msg.Request) msg.Response {
+		res := msg.NewHttpResponse()
+		res.SetBody("<div> <h1> Welcome to the index page </h1> </div>", "text/html; charset=utf-8")
+		return res
+	})
+	app.AddRoute(msg.HTTP_GET, "/index.html", indexAction)
 
 	app.Start()
 }

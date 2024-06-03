@@ -24,6 +24,7 @@ type HttpServer struct {
 func Init(host string, port string) *HttpServer {
 	logger := logger.New("Server")
 	addr := fmt.Sprintf("%s:%s", host, port)
+
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		panic(err)
@@ -59,7 +60,9 @@ func (s *HttpServer) Start() {
 			return
 		} else {
 			// create a connection handler
+			s.logger.Debug("Accepted TCP connection...")
 			httpConn := conn.NewConn(c, &s.Router)
+			s.logger.Debug("Handling TCP connection...")
 			go httpConn.HandleConn()
 		}
 	}

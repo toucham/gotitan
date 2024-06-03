@@ -1,6 +1,9 @@
 package msg
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 type Response interface {
 	String() string               // String transforms [Response] into string that can be sent to the client
@@ -10,14 +13,13 @@ type Response interface {
 // Http response structure
 type HttpResponse struct {
 	HttpMessage
-	Status  HttpStatus
-	Headers ResponseHeaders
-	Body    string
+	Status HttpStatus
+	body   string
 }
 
 func (r *HttpResponse) SetBody(body string, contentType string) error {
-	r.Headers.ContentLength = len(body)
-	r.Headers.ContentType = contentType
+	r.headers["content-length"] = strconv.Itoa(len(body))
+	r.headers["content-type"] = contentType
 	r.body = body
 	return nil
 }
@@ -46,27 +48,35 @@ func (r *HttpResponse) buildHeaders() string {
 
 func NewHttpResponse() *HttpResponse {
 	return &HttpResponse{
-		Headers: DefaultResponseHeader(),
+		HttpMessage: HttpMessage{
+			headers: make(map[string]string),
+		},
 	}
 }
 
 func ServerErrorResponse() *HttpResponse {
 	return &HttpResponse{
-		Headers: DefaultResponseHeader(),
-		Status:  StatusServerInternalError,
+		HttpMessage: HttpMessage{
+			headers: make(map[string]string),
+		},
+		Status: StatusServerInternalError,
 	}
 }
 
 func BadRequestResponse() *HttpResponse {
 	return &HttpResponse{
-		Headers: DefaultResponseHeader(),
-		Status:  StatusBadRequest,
+		HttpMessage: HttpMessage{
+			headers: make(map[string]string),
+		},
+		Status: StatusBadRequest,
 	}
 }
 
 func NotFoundResponse() *HttpResponse {
 	return &HttpResponse{
-		Headers: DefaultResponseHeader(),
-		Status:  StatusNotFound,
+		HttpMessage: HttpMessage{
+			headers: make(map[string]string),
+		},
+		Status: StatusNotFound,
 	}
 }

@@ -2,6 +2,7 @@ package msg
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -71,7 +72,7 @@ func (builder *HttpRequestBuilder) AddHeader(line string) error {
 
 	req := builder.request
 
-	if line == "" {
+	if line == "" || line == "\r" { // curl -> carriage return
 		if req.Headers.ContentLength > 0 { // expect body
 			builder.state = BodyBuildState
 		} else {
@@ -82,7 +83,8 @@ func (builder *HttpRequestBuilder) AddHeader(line string) error {
 
 	headers := strings.SplitN(line, ":", 2)
 	if len(headers) != 2 {
-		return errors.New("headers are split into more than two elements")
+		errorMsg := fmt.Sprintf("headers are not split into two elements: %d", len(headers))
+		return errors.New(errorMsg)
 	}
 
 	key := strings.ToLower(strings.TrimSpace(headers[0]))
