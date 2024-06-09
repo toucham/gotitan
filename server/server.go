@@ -62,7 +62,6 @@ func (s *HttpServer) Start() {
 			// create a connection handler
 			s.logger.Info("Accepted TCP connection...")
 			httpConn := conn.NewConn(c, &s.Router)
-			s.logger.Debug("Handling TCP connection...")
 			go httpConn.HandleConn()
 		}
 	}

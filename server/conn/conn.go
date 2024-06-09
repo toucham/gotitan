@@ -35,9 +35,9 @@ func (c *HttpConn) HandleConn() {
 	resQueue := make(chan *routerContext, CHANNEL_BUFFER) // set buffer size to not block read
 
 	// pipelining
-	go read(c.conn, reqQueue, c.log)      // read message and parse request from fd
-	go route(c.route, reqQueue, resQueue) // gets request from queue then pass to writer
-	go write(c.conn, resQueue, c.log)     // convert responses to msg and write to fd
+	go read(c.conn, reqQueue, c.log)             // read message and parse request from fd
+	go route(c.route, reqQueue, resQueue, c.log) // gets request from queue then pass to writer
+	go write(c.conn, resQueue, c.log)            // convert responses to msg and write to fd
 }
 
 // routerContext implements the [context.Context] interface for passing in message info across goroutines
@@ -57,7 +57,7 @@ func buildContext(req msg.Request) *routerContext {
 	}
 }
 
-func route(r router.Route, source <-chan *routerContext, dest chan<- *routerContext) {
+func route(r router.Route, source <-chan *routerContext, dest chan<- *routerContext, log logger.Logger) {
 	isSafePipeline := true
 	// for routing and closing [routerContext.Done] channel
 	goRoute := func(rc *routerContext) {
@@ -66,6 +66,7 @@ func route(r router.Route, source <-chan *routerContext, dest chan<- *routerCont
 	}
 
 	for rc := range source {
+		log.Info(fmt.Sprintf("request: %s %s", rc.Request.GetMethod(), rc.Request.GetPath()))
 		dest <- rc
 		// if request is safe method then pipeline
 		if rc.Request.IsSafeMethod() && isSafePipeline {
@@ -94,7 +95,6 @@ func read(conn net.Conn, queue chan<- *routerContext, l logger.Logger) {
 			if char != "\n" {
 				line += char
 			} else {
-				l.Debug(fmt.Sprintf("request-line: %s", line))
 				err = reqBuilder.AddRequestLine(line) // parse into [HttpRequest] line by line
 				line = ""
 			}
@@ -144,15 +144,18 @@ func write(conn net.Conn, source <-chan *routerContext, l logger.Logger) {
 		// send HTTP response
 		res := routerCtx.Response
 		if res == nil {
-			res = msg.ServerErrorResponse()
+			res = msg.CreateHttpResponse(msg.StatusServerInternalError)
 		}
-		msg := res.String()
-		if _, err := writer.WriteString(msg); err != nil { // write the [HttpResponse] to buffer
-			l.Warn(err.Error())
-			break
+		msg, err := res.String()
+		if err != nil {
+			l.Fatal(fmt.Sprintf("problems with stringify response %s", err.Error()))
 		} else {
-			l.Debug("Respond to client")
-			writer.Flush() // respond to client (write to socket)
+			if _, err := writer.WriteString(msg); err != nil { // write the [HttpResponse] to buffer
+				l.Warn(err.Error())
+				break
+			} else {
+				writer.Flush() // respond to client (write to socket)
+			}
 		}
 	}
 

@@ -51,8 +51,8 @@ func (m MockResponse) SetBody(body string, contentType string) error {
 
 const EXPECTED_RESP_STRING = "HTTP OK"
 
-func (r MockResponse) String() string {
-	return EXPECTED_RESP_STRING
+func (r MockResponse) String() (string, error) {
+	return EXPECTED_RESP_STRING, nil
 }
 
 func createMockCtx() routerContext {

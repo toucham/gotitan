@@ -54,9 +54,12 @@ func (r *HttpMessage) GetPath() string {
 	return r.url.String() // TODO: change to get path
 }
 
-// getter method for HTTP version in HttpMessage
+// GetVersion is a getter method for HTTP version in HttpMessage
 func (r *HttpMessage) GetVersion() HttpVersion {
-	return r.version // TODO: change to get path
+	if r.version == "" {
+		panic("HTTP version shouldn't be empty")
+	}
+	return r.version
 }
 
 func (r *HttpMessage) IsSafeMethod() bool {

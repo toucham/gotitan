@@ -22,12 +22,17 @@ type ConsoleLogger struct {
 }
 
 func New(origin string) *ConsoleLogger {
+	if len(origin) > 10 {
+		origin = fmt.Sprintf("%s - ", origin[:10])
+	} else {
+		origin = fmt.Sprintf("%10s - ", origin)
+	}
 	l := ConsoleLogger{
 		level: 0,
-		debug: log.New(os.Stdout, fmt.Sprintf("DEBUG [%s]: ", origin), log.Ltime),
-		info:  log.New(os.Stdout, fmt.Sprintf("INFO [%s]: ", origin), log.Ltime),
-		warn:  log.New(os.Stdout, fmt.Sprintf("WARN [%s]: ", origin), log.Ltime),
-		fatal: log.New(os.Stdout, fmt.Sprintf("FATAL [%s]: ", origin), log.Ltime),
+		debug: log.New(os.Stdout, fmt.Sprintf("DEBUG %s", origin), log.Ltime),
+		info:  log.New(os.Stdout, fmt.Sprintf("INFO  %s", origin), log.Ltime),
+		warn:  log.New(os.Stdout, fmt.Sprintf("WARN  %s", origin), log.Ltime),
+		fatal: log.New(os.Stdout, fmt.Sprintf("FATAL %s", origin), log.Ltime),
 	}
 	return &l
 }

@@ -65,7 +65,7 @@ func (r *Router) ContainRoute(method msg.HttpMethod, route string) bool {
 func (r *Router) To(req msg.Request) msg.Response {
 	// defer close(rc.Done) // closes the channel at the end
 	if req == nil {
-		return msg.ServerErrorResponse()
+		return msg.CreateHttpResponse(msg.StatusServerInternalError)
 	} else {
 		var action RouterAction
 
@@ -80,7 +80,7 @@ func (r *Router) To(req msg.Request) msg.Response {
 			action = r.routes[3][req.GetPath()]
 		}
 		if action == nil {
-			return msg.NotFoundResponse()
+			return msg.CreateHttpResponse(msg.StatusNotFound)
 		} else {
 			return action(req)
 		}
