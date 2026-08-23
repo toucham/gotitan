@@ -1,6 +1,6 @@
 # Proxy in Go Titan
 
-A simple layer 4 proxy.
+A simple forward proxy
 
 ## Motivation
 
